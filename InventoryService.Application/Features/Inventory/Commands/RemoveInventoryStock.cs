@@ -67,7 +67,7 @@ namespace InventoryService.Application.Features.Inventory.Commands
                 await _inventoryRepository.UpdateAsync(inventory, cancellationToken);
 
                 // Create transaction record
-                var transaction = new InventoryTransaction(
+                var transaction = new Domain.Entities.InventoryTransaction(
                     inventory.Id,
                     TransactionType.StockOut,
                     request.Quantity,

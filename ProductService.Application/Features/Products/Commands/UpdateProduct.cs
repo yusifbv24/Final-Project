@@ -2,6 +2,8 @@
 using FluentValidation;
 using MediatR;
 using ProductService.Application.DTOs;
+using ProductService.Application.Events;
+using ProductService.Application.Interfaces;
 using ProductService.Domain.Exceptions;
 using ProductService.Domain.Repositories;
 
@@ -43,17 +45,20 @@ namespace ProductService.Application.Features.Products.Commands
             private readonly ICategoryRepository _categoryRepository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMapper _mapper;
+            private readonly IMessagePublisher _messagePublisher;
 
             public Handler(
                 IProductRepository productRepository,
                 ICategoryRepository categoryRepository,
                 IUnitOfWork unitOfWork,
-                IMapper mapper)
+                IMapper mapper,
+                IMessagePublisher messagePublisher)
             {
                 _productRepository = productRepository;
                 _categoryRepository = categoryRepository;
                 _unitOfWork = unitOfWork;
                 _mapper = mapper;
+                _messagePublisher = messagePublisher;
             }
 
             public async Task<ProductDto> Handle(Command request, CancellationToken cancellationToken)
@@ -78,6 +83,20 @@ namespace ProductService.Application.Features.Products.Commands
 
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                //Publish update product event
+
+                await _messagePublisher.PublishAsync(
+                    new ProductUpdatedEvent(
+                        product.Id,
+                        product.Name,
+                        product.SKU,
+                        product.Price,
+                        product.CategoryId
+                    ),
+                    "product.updated",
+                    cancellationToken
+                );
 
                 // Fetch with category details
                 var updatedProduct = await _productRepository.GetByIdAsync(product.Id, cancellationToken);

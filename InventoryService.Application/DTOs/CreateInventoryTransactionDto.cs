@@ -1,5 +1,4 @@
-﻿
-using InventoryService.Domain.Entities;
+﻿using InventoryService.Domain.Entities;
 
 namespace InventoryService.Application.DTOs
 {
