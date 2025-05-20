@@ -1,0 +1,123 @@
+/* Site-wide styles */
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+    background-color: #f8f9fa;
+}
+
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    white-space: nowrap;
+    line-height: 60px;
+    background-color: #343a40;
+    color: #fff;
+}
+
+/* Dashboard styles */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+/* Status badges */
+.status-badge {
+    width: 100px;
+    text-align: center;
+}
+
+/* Activity log */
+#activityLog {
+    scrollbar-width: thin;
+}
+
+    #activityLog::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    #activityLog::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    #activityLog::-webkit-scrollbar-thumb {
+        background: #888;
+    }
+
+        #activityLog::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+/* Toast notifications */
+.toast-container {
+    z-index: 1100;
+}
+
+/* Table styling */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Inventory specific styles */
+.low-stock {
+    background-color: rgba(255, 193, 7, 0.2);
+}
+
+.no-stock {
+    background-color: rgba(220, 53, 69, 0.2);
+}
+
+/* Order specific styles */
+.order-status-pending {
+    border-left: 5px solid #ffc107;
+}
+
+.order-status-processing {
+    border-left: 5px solid #17a2b8;
+}
+
+.order-status-shipped {
+    border-left: 5px solid #007bff;
+}
+
+.order-status-delivered {
+    border-left: 5px solid #28a745;
+}
+
+.order-status-cancelled {
+    border-left: 5px solid #dc3545;
+}
+
+/* Supplier specific styles */
+.supplier-inactive {
+    opacity: 0.7;
+}
+
+/* Loading indicator */
+.loading-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+}

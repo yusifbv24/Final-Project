@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Microservices Visualizer</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                    <i class="bi bi-graph-up-arrow"></i> Microservices Visualizer
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Controller"].ToString() == "Dashboard" ? "active" : "")" 
+                               asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(ViewContext.RouteData.Values["Controller"].ToString() == "Inventory" ? "active" : "")" 
+                               href="#" id="inventoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Inventory
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="inventoryDropdown">
+                                <li><a class="dropdown-item" asp-controller="Inventory" asp-action="Index">All Inventory</a></li>
+                                <li><a class="dropdown-item" asp-controller="Inventory" asp-action="Locations">Locations</a></li>
+                                <li><a class="dropdown-item" asp-controller="Inventory" asp-action="Transactions">Transactions</a></li>
+                                <li><a class="dropdown-item" asp-controller="Inventory" asp-action="LowStock">Low Stock</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(ViewContext.RouteData.Values["Controller"].ToString() == "Order" ? "active" : "")" 
+                               href="#" id="orderDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Orders
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="orderDropdown">
+                                <li><a class="dropdown-item" asp-controller="Order" asp-action="Index">All Orders</a></li>
+                                <li><a class="dropdown-item" asp-controller="Order" asp-action="Customers">Customers</a></li>
+                                <li><a class="dropdown-item" asp-controller="Order" asp-action="Statistics">Statistics</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" asp-controller="Order" asp-action="ByStatus" asp-route-status="Pending">Pending Orders</a></li>
+                                <li><a class="dropdown-item" asp-controller="Order" asp-action="ByStatus" asp-route-status="Processing">Processing Orders</a></li>
+                                <li><a class="dropdown-item" asp-controller="Order" asp-action="ByStatus" asp-route-status="Shipped">Shipped Orders</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(ViewContext.RouteData.Values["Controller"].ToString() == "Product" ? "active" : "")" 
+                               href="#" id="productDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Products
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="productDropdown">
+                                <li><a class="dropdown-item" asp-controller="Product" asp-action="Index">All Products</a></li>
+                                <li><a class="dropdown-item" asp-controller="Product" asp-action="Categories">Categories</a></li>
+                                <li><a class="dropdown-item" asp-controller="Product" asp-action="Create">Add New Product</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(ViewContext.RouteData.Values["Controller"].ToString() == "Supplier" ? "active" : "")" 
+                               href="#" id="supplierDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Suppliers
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="supplierDropdown">
+                                <li><a class="dropdown-item" asp-controller="Supplier" asp-action="Index">All Suppliers</a></li>
+                                <li><a class="dropdown-item" asp-controller="Supplier" asp-action="PurchaseOrders">Purchase Orders</a></li>
+                                <li><a class="dropdown-item" asp-controller="Supplier" asp-action="PurchaseOrderSummary">Purchase Order Summary</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container mt-4">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2025 - Microservices Visualizer - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
