@@ -96,6 +96,7 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<OrderDbContext>();
         context.Database.Migrate();
         context.Database.EnsureCreated();
+        await OrderServiceSeeder.SeedData(services);
     }
     catch (Exception ex)
     {

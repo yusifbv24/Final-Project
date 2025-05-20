@@ -96,6 +96,7 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<InventoryDbContext>();
         context.Database.Migrate();
         context.Database.EnsureCreated();
+        await InventoryServiceSeeder.SeedData(services);
     }
     catch (Exception ex)
     {
