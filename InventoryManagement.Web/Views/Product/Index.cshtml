@@ -1,0 +1,88 @@
+﻿@model IEnumerable<InventoryManagement.Web.Models.Product.ProductViewModel>
+
+@{
+    ViewData["Title"] = "Products";
+}
+
+<div class="container mt-4">
+    <h1>Products</h1>
+
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="products-table-body">
+            @foreach (var product in Model)
+            {
+                <tr id="product-@product.Id">
+                    <td>@product.Id</td>
+                    <td>@product.Name</td>
+                    <td>@product.SKU</td>
+                    <td>$@product.Price.ToString("F2")</td>
+                    <td>@product.CategoryName</td>
+                    <td>
+                        @if (product.IsActive)
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Inactive</span>
+                        }
+                    </td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-primary">Details</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('@Url.Content("~/hubs/products")')
+                .withAutomaticReconnect()
+                .build();
+
+            // Product created event
+            connection.on("ProductCreated", (productId, name) => {
+                // In a real application, we'd fetch the full product details
+                // For demo purposes, we'll show a notification and could update the UI
+                toastr.success(`New product created: ${name}`);
+            });
+
+            // Product updated event
+            connection.on("ProductUpdated", (productId, name) => {
+                // Update the product row if it exists
+                const row = document.getElementById(`product-${productId}`);
+                if (row) {
+                    // For a real application, we'd update all fields
+                    // For this demo, we'll just highlight the row to show it changed
+                    row.classList.add('table-warning');
+                    setTimeout(() => {
+                        row.classList.remove('table-warning');
+                    }, 3000);
+                }
+
+                toastr.info(`Product updated: ${name}`);
+            });
+
+            // Start the connection
+            connection.start()
+                .then(() => console.log("Connected to Product hub"))
+                .catch(err => console.error("Error connecting to Product hub:", err));
+        });
+    </script>
+}

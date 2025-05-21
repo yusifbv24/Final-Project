@@ -1,0 +1,302 @@
+﻿@model InventoryManagement.Web.Models.Dashboard.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container mt-4">
+    <h1>Dashboard</h1>
+
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Products</h5>
+                    <p class="card-text display-4">@Model.TotalProducts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Locations</h5>
+                    <p class="card-text display-4">@Model.TotalLocations</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Orders</h5>
+                    <p class="card-text display-4">@Model.TotalOrders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Low Stock Items</h5>
+                    <p class="card-text display-4">@Model.LowStockItemsCount</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Recent Orders</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentOrders.Any())
+                    {
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Customer</th>
+                                    <th>Status</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var order in Model.RecentOrders)
+                                {
+                                    <tr>
+                                        <td><a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id">@order.Id</a></td>
+                                        <td>@order.CustomerName</td>
+                                        <td><span class="badge bg-@GetStatusColor(order.Status)">@order.Status</span></td>
+                                        <td>$@order.TotalAmount.ToString("F2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No orders found.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Orders by Status</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.OrdersByStatus.Any())
+                    {
+                        <canvas id="orderStatusChart"></canvas>
+                    }
+                    else
+                    {
+                        <p>No order status data available.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Top Selling Products</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.TopSellingProducts.Any())
+                    {
+                        <canvas id="topProductsChart"></canvas>
+                    }
+                    else
+                    {
+                        <p>No product sales data available.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Real-time Updates</h5>
+                </div>
+                <div class="card-body">
+                    <div id="notifications" class="list-group" style="max-height: 300px; overflow-y: auto;">
+                        <div class="list-group-item">Waiting for real-time updates...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+
+    <script>
+        // Chart initialization for Order Status
+        const orderStatusLabels = @Json.Serialize(Model.OrdersByStatus.Keys);
+        const orderStatusData = @Json.Serialize(Model.OrdersByStatus.Values);
+
+        const orderStatusChart = new Chart(
+            document.getElementById('orderStatusChart'),
+            {
+                type: 'pie',
+                data: {
+                    labels: orderStatusLabels,
+                    datasets: [{
+                        data: orderStatusData,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        );
+
+        // Chart initialization for Top Selling Products
+        const topProductsLabels = @Json.Serialize(Model.TopSellingProducts.Keys);
+        const topProductsData = @Json.Serialize(Model.TopSellingProducts.Values);
+
+        const topProductsChart = new Chart(
+            document.getElementById('topProductsChart'),
+            {
+                type: 'bar',
+                data: {
+                    labels: topProductsLabels,
+                    datasets: [{
+                        label: 'Units Sold',
+                        data: topProductsData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            }
+        );
+
+        // SignalR connections
+        const productHubUrl = "@Url.Content("~/hubs/products")";
+        const inventoryHubUrl = "@Url.Content("~/hubs/inventory")";
+        const orderHubUrl = "@Url.Content("~/hubs/orders")";
+
+        // Function to add notification
+        function addNotification(message) {
+            const notifications = document.getElementById('notifications');
+            const item = document.createElement('div');
+            item.className = 'list-group-item';
+
+            const timestamp = new Date().toLocaleTimeString();
+            item.innerHTML = `<small class="text-muted">${timestamp}</small> ${message}`;
+
+            notifications.insertBefore(item, notifications.firstChild);
+
+            // Remove first notification if there are more than 10
+            if (notifications.children.length > 10) {
+                notifications.removeChild(notifications.lastChild);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect to SignalR hubs
+            const productConnection = new signalR.HubConnectionBuilder()
+                .withUrl(productHubUrl)
+                .withAutomaticReconnect()
+                .build();
+
+            const inventoryConnection = new signalR.HubConnectionBuilder()
+                .withUrl(inventoryHubUrl)
+                .withAutomaticReconnect()
+                .build();
+
+            const orderConnection = new signalR.HubConnectionBuilder()
+                .withUrl(orderHubUrl)
+                .withAutomaticReconnect()
+                .build();
+
+            // Product hub event handlers
+            productConnection.on("ProductCreated", (productId, name) => {
+                addNotification(`<span class="text-success"><i class="bi bi-plus-circle"></i> New product created: ${name} (ID: ${productId})</span>`);
+            });
+
+            productConnection.on("ProductUpdated", (productId, name) => {
+                addNotification(`<span class="text-primary"><i class="bi bi-pencil"></i> Product updated: ${name} (ID: ${productId})</span>`);
+            });
+
+            // Inventory hub event handlers
+            inventoryConnection.on("InventoryUpdated", (inventoryId, productId, quantity) => {
+                addNotification(`<span class="text-info"><i class="bi bi-arrow-repeat"></i> Inventory updated: Product ID ${productId} - New quantity: ${quantity}</span>`);
+            });
+
+            inventoryConnection.on("LowStockAlert", (inventoryId, productId, locationId, quantity, threshold) => {
+                addNotification(`<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Low stock alert: Product ID ${productId} at Location ID ${locationId} - Quantity: ${quantity}/${threshold}</span>`);
+            });
+
+            // Order hub event handlers
+            orderConnection.on("OrderCreated", (orderId, customerName) => {
+                addNotification(`<span class="text-success"><i class="bi bi-cart-plus"></i> New order from ${customerName} (Order ID: ${orderId})</span>`);
+            });
+
+            orderConnection.on("OrderStatusChanged", (orderId, status) => {
+                addNotification(`<span class="text-primary"><i class="bi bi-arrow-right-circle"></i> Order #${orderId} status changed to ${status}</span>`);
+            });
+
+            // Start the connections
+            productConnection.start()
+                .then(() => console.log("Connected to Product hub"))
+                .catch(err => console.error("Error connecting to Product hub:", err));
+
+            inventoryConnection.start()
+                .then(() => console.log("Connected to Inventory hub"))
+                .catch(err => console.error("Error connecting to Inventory hub:", err));
+
+            orderConnection.start()
+                .then(() => console.log("Connected to Order hub"))
+                .catch(err => console.error("Error connecting to Order hub:", err));
+        });
+    </script>
+}
+
+@functions {
+    string GetStatusColor(InventoryManagement.Web.Models.Order.OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "secondary",
+            OrderStatus.Processing => "primary",
+            OrderStatus.Shipped => "info",
+            OrderStatus.Delivered => "success",
+            OrderStatus.Cancelled => "danger",
+            _ => "secondary"
+        };
+    }
+}

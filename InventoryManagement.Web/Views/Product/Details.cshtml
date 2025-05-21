@@ -1,0 +1,162 @@
+﻿@model InventoryManagement.Web.Models.Product.ProductViewModel
+
+@{
+    ViewData["Title"] = "Product Details";
+}
+
+<div class="container mt-4">
+    <h1>Product Details</h1>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>@Model.Name</h3>
+                @if (Model.IsActive)
+                {
+                    <span class="badge bg-success">Active</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">Inactive</span>
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">ID:</dt>
+                        <dd class="col-sm-8">@Model.Id</dd>
+                        
+                        <dt class="col-sm-4">SKU:</dt>
+                        <dd class="col-sm-8">@Model.SKU</dd>
+                        
+                        <dt class="col-sm-4">Price:</dt>
+                        <dd class="col-sm-8">$@Model.Price.ToString("F2")</dd>
+                        
+                        <dt class="col-sm-4">Category:</dt>
+                        <dd class="col-sm-8">@Model.CategoryName</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h5>Description</h5>
+                    <p>@Model.Description</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Inventory Status</h3>
+        </div>
+        <div class="card-body">
+            <div id="inventory-status-loading">
+                Loading inventory data...
+            </div>
+            <div id="inventory-status" style="display: none;">
+                <!-- Will be populated via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load product inventory data
+            fetch(`/api/inventory/by-product/${@Model.Id}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('inventory-status');
+                    const loading = document.getElementById('inventory-status-loading');
+                    
+                    if (data.length === 0) {
+                        container.innerHTML = '<div class="alert alert-warning">No inventory data found for this product.</div>';
+                    } else {
+                        let html = '<table class="table table-striped">';
+                        html += '<thead><tr><th>Location</th><th>Quantity</th><th>Status</th></tr></thead><tbody>';
+                        
+                        data.forEach(item => {
+                            let statusClass = item.quantity > 10 ? 'success' : (item.quantity > 0 ? 'warning' : 'danger');
+                            let statusText = item.quantity > 10 ? 'In Stock' : (item.quantity > 0 ? 'Low Stock' : 'Out of Stock');
+                            
+                            html += `<tr id="inventory-${item.id}">`;
+                            html += `<td>${item.locationName}</td>`;
+                            html += `<td class="quantity-value">${item.quantity}</td>`;
+                            html += `<td><span class="badge bg-${statusClass}">${statusText}</span></td>`;
+                            html += '</tr>';
+                        });
+                        
+                        html += '</tbody></table>';
+                        container.innerHTML = html;
+                    }
+                    
+                    container.style.display = 'block';
+                    loading.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error fetching inventory data:', error);
+                    document.getElementById('inventory-status').innerHTML = 
+                        '<div class="alert alert-danger">Error loading inventory data.</div>';
+                    document.getElementById('inventory-status').style.display = 'block';
+                    document.getElementById('inventory-status-loading').style.display = 'none';
+                });
+                
+            // Connect to SignalR
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/inventory')
+                .withAutomaticReconnect()
+                .build();
+                
+            // Inventory updated event
+            connection.on("InventoryUpdated", (inventoryId, productId, quantity) => {
+                if (productId === @Model.Id) {
+                    const row = document.getElementById(`inventory-${inventoryId}`);
+                    if (row) {
+                        const quantityCell = row.querySelector('.quantity-value');
+                        if (quantityCell) {
+                            // Highlight the change
+                            quantityCell.classList.add('bg-warning');
+                            
+                            // Update the value
+                            const oldValue = parseInt(quantityCell.textContent);
+                            quantityCell.textContent = quantity;
+                            
+                            // Update status if needed
+                            const statusCell = row.querySelector('.badge');
+                            if (statusCell) {
+                                if (quantity > 10) {
+                                    statusCell.className = 'badge bg-success';
+                                    statusCell.textContent = 'In Stock';
+                                } else if (quantity > 0) {
+                                    statusCell.className = 'badge bg-warning';
+                                    statusCell.textContent = 'Low Stock';
+                                } else {
+                                    statusCell.className = 'badge bg-danger';
+                                    statusCell.textContent = 'Out of Stock';
+                                }
+                            }
+                            
+                            // Remove highlight after a delay
+                            setTimeout(() => {
+                                quantityCell.classList.remove('bg-warning');
+                            }, 3000);
+                            
+                            // Show toast notification
+                            toastr.info(`Inventory updated: Quantity changed from ${oldValue} to ${quantity}`);
+                        }
+                    }
+                }
+            });
+            
+            // Start the connection
+            connection.start()
+                .then(() => console.log("Connected to Inventory hub"))
+                .catch(err => console.error("Error connecting to Inventory hub:", err));
+        });
+    </script>
+}

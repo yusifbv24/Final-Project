@@ -1,0 +1,44 @@
+﻿@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="text-center mt-4">
+    <h1 class="display-4">Inventory Management System</h1>
+    <p class="lead">A microservices-based system for managing products, inventory, and orders</p>
+
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="bi bi-box-seam"></i> Products</h5>
+                    <p class="card-text">Manage your product catalog</p>
+                    <a asp-controller="Product" asp-action="Index" class="btn btn-primary">View Products</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="bi bi-clipboard-check"></i> Inventory</h5>
+                    <p class="card-text">Track stock levels across locations</p>
+                    <a asp-controller="Inventory" asp-action="Index" class="btn btn-primary">View Inventory</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="bi bi-cart3"></i> Orders</h5>
+                    <p class="card-text">Manage customer orders</p>
+                    <a asp-controller="Order" asp-action="Index" class="btn btn-primary">View Orders</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a asp-action="Dashboard" class="btn btn-success btn-lg">
+            <i class="bi bi-speedometer2"></i> Go to Dashboard
+        </a>
+    </div>
+</div>

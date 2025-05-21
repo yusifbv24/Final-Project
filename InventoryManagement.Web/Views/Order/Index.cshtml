@@ -1,0 +1,152 @@
+﻿@model IEnumerable<InventoryManagement.Web.Models.Order.OrderViewModel>
+
+@{
+    ViewData["Title"] = "Orders";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Orders</h1>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Create New Order
+        </a>
+    </div>
+
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="orders-table-body">
+            @foreach (var order in Model)
+            {
+                <tr id="order-@order.Id">
+                    <td>@order.Id</td>
+                    <td>@order.CustomerName</td>
+                    <td>@order.OrderDate.ToString("g")</td>
+                    <td>$@order.TotalAmount.ToString("F2")</td>
+                    <td>
+                        <span class="badge bg-@GetStatusColor(order.Status)">@order.Status</span>
+                    </td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-primary">Details</a>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                Update Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                @foreach (var status in Enum.GetValues<InventoryManagement.Web.Models.Order.OrderStatus>())
+                                {
+                                    <li><a class="dropdown-item" href="#" data-order-id="@order.Id" data-status="@((int)status)">@status</a></li>
+                                }
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect to SignalR
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('@Url.Content("~/hubs/orders")')
+                .withAutomaticReconnect()
+                .build();
+
+            // Order created event
+            connection.on("OrderCreated", (orderId, customerName) => {
+                toastr.success(`New order created: #${orderId} from ${customerName}`);
+
+                // In a real app, we would refresh the data or add the new order to the table
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            });
+
+            // Order status changed event
+            connection.on("OrderStatusChanged", (orderId, status) => {
+                const row = document.getElementById(`order-${orderId}`);
+                if (row) {
+                    // Update status badge
+                    const statusBadge = row.querySelector('.badge');
+                    if (statusBadge) {
+                        const statusColors = {
+                            'Pending': 'secondary',
+                            'Processing': 'primary',
+                            'Shipped': 'info',
+                            'Delivered': 'success',
+                            'Cancelled': 'danger'
+                        };
+
+                        statusBadge.className = `badge bg-${statusColors[status] || 'secondary'}`;
+                        statusBadge.textContent = status;
+
+                        // Highlight the row
+                        row.classList.add('table-warning');
+                        setTimeout(() => {
+                            row.classList.remove('table-warning');
+                        }, 3000);
+
+                        toastr.info(`Order #${orderId} status changed to ${status}`);
+                    }
+                }
+            });
+
+            // Start the connection
+            connection.start()
+                .then(() => console.log("Connected to Order hub"))
+                .catch(err => console.error("Error connecting to Order hub:", err));
+
+            // Handle status update clicks
+            document.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    const orderId = this.getAttribute('data-order-id');
+                    const status = this.getAttribute('data-status');
+
+                    // Call API to update status
+                    fetch(`/Order/UpdateStatus?id=${orderId}&status=${status}`, {
+                        method: 'POST'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Status update failed');
+                        }
+                        // Success is handled by SignalR notification
+                    })
+                    .catch(error => {
+                        console.error('Error updating order status:', error);
+                        toastr.error('Error updating order status');
+                    });
+                });
+            });
+        });
+    </script>
+}
+
+@functions {
+    string GetStatusColor(InventoryManagement.Web.Models.Order.OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => "secondary",
+            OrderStatus.Processing => "primary",
+            OrderStatus.Shipped => "info",
+            OrderStatus.Delivered => "success",
+            OrderStatus.Cancelled => "danger",
+            _ => "secondary"
+        };
+    }
+}
