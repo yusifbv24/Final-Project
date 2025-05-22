@@ -14,6 +14,14 @@
         </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(TempData["Error"] as string))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <div class="row">
         <!-- Order Information -->
         <div class="col-md-8">
@@ -123,36 +131,40 @@
                     <h5><i class="bi bi-gear-fill"></i> Order Actions</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label"><strong>Current Status</strong></label>
-                        <div class="p-3 bg-light rounded">
-                            <span class="badge bg-@GetStatusColor(Model.Status) fs-6" id="current-status-display">
-                                @Model.Status
-                            </span>
+                    <form id="statusUpdateForm" asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Current Status</strong></label>
+                            <div class="p-3 bg-light rounded">
+                                <span class="badge bg-@GetStatusColor(Model.Status) fs-6" id="current-status-display">
+                                    @Model.Status
+                                </span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <label for="statusSelect" class="form-label"><strong>Change Status</strong></label>
-                        <select id="statusSelect" class="form-select">
-                            <option value="">-- Select New Status --</option>
-                            @foreach (var status in Enum.GetValues<OrderStatus>())
-                            {
-                                if (status == Model.Status)
+                        <div class="mb-3">
+                            <label for="statusSelect" class="form-label"><strong>Change Status</strong></label>
+                            <select id="statusSelect" name="status" class="form-select">
+                                <option value="">-- Select New Status --</option>
+                                @foreach (var status in Enum.GetValues<OrderStatus>())
                                 {
-                                    <option value="@status" disabled>@status</option>
+                                    if (status == Model.Status)
+                                    {
+                                        <option value="@((int)status)" disabled>@status (Current)</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@((int)status)">@status</option>
+                                    }
                                 }
-                                else
-                                {
-                                    <option value="@status">@status</option>
-                                }
-                            }
-                        </select>
-                    </div>
+                            </select>
+                        </div>
 
-                    <button type="button" class="btn btn-primary w-100 mb-3" id="updateStatusBtn" disabled>
-                        <i class="bi bi-arrow-repeat"></i> Update Status
-                    </button>
+                        <button type="button" class="btn btn-primary w-100 mb-3" id="updateStatusBtn" disabled>
+                            <i class="bi bi-arrow-repeat"></i> Update Status
+                        </button>
+                    </form>
 
                     <hr>
 
@@ -281,11 +293,31 @@
             const statusSelect = document.getElementById('statusSelect');
             const updateBtn = document.getElementById('updateStatusBtn');
             const modal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+            const form = document.getElementById('statusUpdateForm');
             let selectedStatus = '';
+            let selectedStatusText = '';
+
+            // Status mapping
+            const statusMapping = {
+                '0': 'Pending',
+                '1': 'Processing',
+                '2': 'Shipped',
+                '3': 'Delivered',
+                '4': 'Cancelled'
+            };
+
+            const statusColors = {
+                'Pending': 'secondary',
+                'Processing': 'primary',
+                'Shipped': 'info',
+                'Delivered': 'success',
+                'Cancelled': 'danger'
+            };
 
             // Enable/disable update button based on selection
             statusSelect.addEventListener('change', function() {
                 selectedStatus = this.value;
+                selectedStatusText = statusMapping[selectedStatus] || '';
                 updateBtn.disabled = !selectedStatus;
 
                 if (selectedStatus) {
@@ -299,19 +331,20 @@
 
             // Show confirmation modal
             updateBtn.addEventListener('click', function() {
-                if (selectedStatus) {
-                    document.getElementById('modal-to-status').textContent = selectedStatus;
-                    document.getElementById('modal-to-status').className = `badge bg-${getStatusColor(selectedStatus)}`;
+                if (selectedStatus && selectedStatusText) {
+                    const toStatusElement = document.getElementById('modal-to-status');
+                    toStatusElement.textContent = selectedStatusText;
+                    toStatusElement.className = `badge bg-${statusColors[selectedStatusText]}`;
                     modal.show();
                 }
             });
 
             // Confirm status update
             document.getElementById('confirmStatusUpdate').addEventListener('click', function() {
-                updateOrderStatus(selectedStatus);
+                updateOrderStatus();
             });
 
-            function updateOrderStatus(status) {
+            function updateOrderStatus() {
                 const confirmBtn = document.getElementById('confirmStatusUpdate');
                 const originalText = confirmBtn.innerHTML;
 
@@ -319,25 +352,30 @@
                 confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
                 confirmBtn.disabled = true;
 
-                fetch(`/Order/UpdateStatus?id=@Model.Id&status=${getStatusValue(status)}`, {
+                // Get form data
+                const formData = new FormData(form);
+
+                fetch(form.action, {
                     method: 'POST',
+                    body: formData,
                     headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
                 .then(async response => {
-                    if (response.ok) {
-                        // Update UI directly since we know the status changed
-                        updateOrderStatusUI(status);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        updateOrderStatusUI(selectedStatusText);
                         modal.hide();
                         showAlert('Status updated successfully!', 'success');
-                        return;
+                    } else {
+                        throw new Error(data.message || 'Failed to update status');
                     }
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 })
                 .catch(error => {
                     console.error('Error updating order status:', error);
-                    showAlert('Failed to update order status. Please try again.', 'danger');
+                    showAlert(error.message || 'Failed to update order status. Please try again.', 'danger');
                 })
                 .finally(() => {
                     confirmBtn.innerHTML = originalText;
@@ -355,7 +393,7 @@
                 statusElements.forEach(element => {
                     if (element) {
                         element.textContent = newStatus;
-                        element.className = element.className.replace(/bg-\w+/, `bg-${getStatusColor(newStatus)}`);
+                        element.className = element.className.replace(/bg-\w+/, `bg-${statusColors[newStatus]}`);
                     }
                 });
 
@@ -367,30 +405,12 @@
 
                 // Update disabled options
                 Array.from(statusSelect.options).forEach(option => {
-                    option.disabled = option.value === newStatus;
+                    const optionStatus = statusMapping[option.value];
+                    option.disabled = optionStatus === newStatus;
+                    if (optionStatus === newStatus) {
+                        option.textContent = `${optionStatus} (Current)`;
+                    }
                 });
-            }
-
-            function getStatusColor(status) {
-                const colors = {
-                    'Pending': 'secondary',
-                    'Processing': 'primary',
-                    'Shipped': 'info',
-                    'Delivered': 'success',
-                    'Cancelled': 'danger'
-                };
-                return colors[status] || 'secondary';
-            }
-
-            function getStatusValue(status) {
-                const values = {
-                    'Pending': 0,
-                    'Processing': 1,
-                    'Shipped': 2,
-                    'Delivered': 3,
-                    'Cancelled': 4
-                };
-                return values[status] || 0;
             }
 
             function showAlert(message, type) {
@@ -403,7 +423,8 @@
                     </div>
                 `;
 
-                document.querySelector('.container').insertBefore(alertContainer, document.querySelector('.container').firstChild);
+                const container = document.querySelector('.container');
+                container.insertBefore(alertContainer, container.firstChild);
 
                 setTimeout(() => {
                     alertContainer.remove();

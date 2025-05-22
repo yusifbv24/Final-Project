@@ -69,19 +69,17 @@
                                                         <li>
                                                             @if (status == order.Status)
                                                             {
-                                                                <button class="dropdown-item status-update-btn"
-                                                                        data-order-id="@order.Id"
-                                                                        data-status="@status"
-                                                                        disabled>
+                                                                <button class="dropdown-item" disabled>
                                                                     <span class="badge bg-@GetStatusColor(status) me-2">@status</span>
-                                                                    @status
+                                                                    @status (Current)
                                                                 </button>
                                                             }
                                                             else
                                                             {
                                                                 <button class="dropdown-item status-update-btn"
                                                                         data-order-id="@order.Id"
-                                                                        data-status="@status">
+                                                                        data-status="@((int)status)"
+                                                                        data-status-text="@status">
                                                                     <span class="badge bg-@GetStatusColor(status) me-2">@status</span>
                                                                     @status
                                                                 </button>
@@ -127,13 +125,30 @@
     </div>
 </div>
 
+<!-- Hidden form for status updates -->
+<form id="statusUpdateForm" asp-action="UpdateStatus" method="post" style="display: none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" id="orderIdInput" name="id" />
+    <input type="hidden" id="statusInput" name="status" />
+</form>
+
 @section Scripts {
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const statusUpdateModal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+            const statusUpdateForm = document.getElementById('statusUpdateForm');
             let currentOrderId = null;
             let newStatus = null;
+            let newStatusText = null;
+
+            const statusColors = {
+                'Pending': 'secondary',
+                'Processing': 'primary',
+                'Shipped': 'info',
+                'Delivered': 'success',
+                'Cancelled': 'danger'
+            };
 
             // Handle status update button clicks
             document.querySelectorAll('.status-update-btn').forEach(button => {
@@ -142,6 +157,7 @@
 
                     currentOrderId = this.getAttribute('data-order-id');
                     newStatus = this.getAttribute('data-status');
+                    newStatusText = this.getAttribute('data-status-text');
 
                     const currentStatusElement = document.getElementById(`status-${currentOrderId}`);
                     const currentStatus = currentStatusElement.textContent.trim();
@@ -149,7 +165,7 @@
                     // Update modal content
                     document.getElementById('modal-order-number').textContent = `#${currentOrderId}`;
                     document.getElementById('modal-current-status').textContent = currentStatus;
-                    document.getElementById('modal-new-status').textContent = newStatus;
+                    document.getElementById('modal-new-status').textContent = newStatusText;
 
                     statusUpdateModal.show();
                 });
@@ -157,10 +173,10 @@
 
             // Confirm status update
             document.getElementById('confirmStatusUpdate').addEventListener('click', function() {
-                updateOrderStatus(selectedStatus);
+                updateOrderStatus();
             });
 
-            function updateOrderStatus(status) {
+            function updateOrderStatus() {
                 const confirmBtn = document.getElementById('confirmStatusUpdate');
                 const originalText = confirmBtn.innerHTML;
 
@@ -168,25 +184,34 @@
                 confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
                 confirmBtn.disabled = true;
 
-                fetch(`/Order/UpdateStatus?id=@Model.Id&status=${getStatusValue(status)}`, {
+                // Set form values
+                document.getElementById('orderIdInput').value = currentOrderId;
+                document.getElementById('statusInput').value = newStatus;
+
+                // Get form data
+                const formData = new FormData(statusUpdateForm);
+
+                fetch(statusUpdateForm.action, {
                     method: 'POST',
+                    body: formData,
                     headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
                 .then(async response => {
-                    if (response.ok) {
-                        // Update UI directly since we know the status changed
-                        updateOrderStatusUI(status);
-                        modal.hide();
-                        showAlert('Status updated successfully!', 'success');
-                        return;
+                    const data = await response.json();
+
+                    if (data.success) {
+                        updateOrderStatusUI(currentOrderId, newStatusText);
+                        statusUpdateModal.hide();
+                        showToast('Success', 'Order status updated successfully!', 'success');
+                    } else {
+                        throw new Error(data.message || 'Failed to update status');
                     }
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 })
                 .catch(error => {
                     console.error('Error updating order status:', error);
-                    showAlert('Failed to update order status. Please try again.', 'danger');
+                    showToast('Error', error.message || 'Failed to update order status. Please try again.', 'error');
                 })
                 .finally(() => {
                     confirmBtn.innerHTML = originalText;
@@ -194,15 +219,31 @@
                 });
             }
 
-            function getStatusValue(status) {
-                const values = {
-                    'Pending': 0,
-                    'Processing': 1,
-                    'Shipped': 2,
-                    'Delivered': 3,
-                    'Cancelled': 4
-                };
-                return values[status] || 0;
+            function updateOrderStatusUI(orderId, status) {
+                const statusBadge = document.getElementById(`status-${orderId}`);
+                if (statusBadge) {
+                    statusBadge.textContent = status;
+                    statusBadge.className = `badge bg-${statusColors[status]} status-badge`;
+
+                    const row = document.getElementById(`order-row-${orderId}`);
+                    if (row) {
+                        row.classList.add('table-warning');
+                        setTimeout(() => row.classList.remove('table-warning'), 3000);
+                    }
+                }
+
+                // Update dropdown options
+                const dropdown = document.querySelector(`[data-order-id="${orderId}"]`)?.closest('.btn-group');
+                if (dropdown) {
+                    const dropdownButtons = dropdown.querySelectorAll('.status-update-btn');
+                    dropdownButtons.forEach(btn => {
+                        const btnStatus = btn.getAttribute('data-status-text');
+                        btn.disabled = btnStatus === status;
+                        if (btnStatus === status) {
+                            btn.innerHTML = `<span class="badge bg-${statusColors[status]} me-2">${status}</span>${status} (Current)`;
+                        }
+                    });
+                }
             }
 
             function showToast(title, message, type) {
@@ -248,17 +289,8 @@
                 .build();
 
             connection.on("OrderStatusChanged", (orderId, status) => {
-                const statusBadge = document.getElementById(`status-${orderId}`);
-                if (statusBadge) {
-                    statusBadge.textContent = status;
-                    statusBadge.className = `badge bg-${getStatusColor(status)} status-badge`;
-
-                    const row = document.getElementById(`order-row-${orderId}`);
-                    if (row) {
-                        row.classList.add('table-warning');
-                        setTimeout(() => row.classList.remove('table-warning'), 3000);
-                    }
-                }
+                updateOrderStatusUI(orderId, status);
+                showToast('Update', `Order #${orderId} status changed to ${status}`, 'success');
             });
 
             connection.start()

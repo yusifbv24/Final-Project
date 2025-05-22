@@ -1,4 +1,5 @@
 using InventoryManagement.Web.Models.Dashboard;
+using InventoryManagement.Web.Models.Order;
 using InventoryManagement.Web.Services.ApiClients;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,7 +28,6 @@ namespace InventoryManagement.Web.Controllers
         {
             return View();
         }
-
         public async Task<IActionResult> Dashboard()
         {
             try
@@ -45,20 +45,24 @@ namespace InventoryManagement.Web.Controllers
                 // Get orders
                 var orders = await _orderApiClient.GetAllOrdersAsync();
                 dashboardViewModel.TotalOrders = orders.Count;
-                dashboardViewModel.TotalSales = orders.Sum(o => o.TotalAmount);
+
+                // Only include non-cancelled orders for sales calculations
+                var validOrders = orders.Where(o => o.Status != OrderStatus.Cancelled).ToList();
+
+                dashboardViewModel.TotalSales = validOrders.Sum(o => o.TotalAmount);
                 dashboardViewModel.RecentOrders = orders.OrderByDescending(o => o.OrderDate).Take(5).ToList();
 
                 // Get inventory
                 var inventories = await _inventoryApiClient.GetAllInventoryAsync();
                 dashboardViewModel.LowStockItemsCount = inventories.Count(i => i.Quantity < 10);
 
-                // Order status summary
+                // Order status summary (include all orders for status tracking)
                 dashboardViewModel.OrdersByStatus = orders
                     .GroupBy(o => o.Status.ToString())
                     .ToDictionary(g => g.Key, g => g.Count());
 
-                // Top selling products
-                dashboardViewModel.TopSellingProducts = orders
+                // Top selling products - FIXED: Exclude cancelled orders
+                dashboardViewModel.TopSellingProducts = validOrders
                     .SelectMany(o => o.Items)
                     .GroupBy(i => i.ProductName)
                     .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity))

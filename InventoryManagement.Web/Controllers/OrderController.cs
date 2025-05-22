@@ -64,10 +64,42 @@ namespace InventoryManagement.Web.Controllers
             return View(order);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int id, OrderStatus status)
         {
-            var result = await _orderApiClient.UpdateOrderStatusAsync(id, status);
-            return RedirectToAction(nameof(Details), new { id });
+            try
+            {
+                var result = await _orderApiClient.UpdateOrderStatusAsync(id, status);
+                if (result)
+                {
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = true, message = "Status updated successfully" });
+                    }
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "Failed to update status" });
+                }
+
+                TempData["Error"] = "Failed to update order status";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating order status");
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "An error occurred while updating status" });
+                }
+
+                TempData["Error"] = "An error occurred while updating order status";
+                return RedirectToAction(nameof(Details), new { id });
+            }
         }
     }
 }
