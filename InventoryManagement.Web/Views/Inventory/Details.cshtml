@@ -1,0 +1,262 @@
+﻿@model InventoryManagement.Web.Models.Inventory.InventoryViewModel
+@{
+    ViewData["Title"] = "Inventory Details";
+    var transactions = ViewBag.Transactions as List<InventoryManagement.Web.Models.Inventory.InventoryTransactionViewModel> ?? new List<InventoryManagement.Web.Models.Inventory.InventoryTransactionViewModel>();
+}
+
+<div class="container mt-4">
+    <h1>Inventory Details</h1>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>@Model.ProductName</h3>
+                <span class="badge bg-@(Model.Quantity > 10 ? "success" : (Model.Quantity > 0 ? "warning" : "danger"))">
+                    @(Model.Quantity > 10 ? "In Stock" : (Model.Quantity > 0 ? "Low Stock" : "Out of Stock"))
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">ID:</dt>
+                        <dd class="col-sm-8">@Model.Id</dd>
+
+                        <dt class="col-sm-4">Product ID:</dt>
+                        <dd class="col-sm-8">
+                            <a asp-controller="Product" asp-action="Details" asp-route-id="@Model.ProductId">@Model.ProductId</a>
+                        </dd>
+
+                        <dt class="col-sm-4">Location:</dt>
+                        <dd class="col-sm-8">
+                            <a asp-controller="Location" asp-action="Details" asp-route-id="@Model.LocationId">@Model.LocationName</a>
+                        </dd>
+
+                        <dt class="col-sm-4">Quantity:</dt>
+                        <dd class="col-sm-8" id="current-quantity">@Model.Quantity</dd>
+
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Inactive</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h5>Stock Operations</h5>
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addStockModal">
+                            <i class="bi bi-plus-circle"></i> Add Stock
+                        </button>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#removeStockModal">
+                            <i class="bi bi-dash-circle"></i> Remove Stock
+                        </button>
+                    </div>
+                    <div class="alert alert-info">
+                        <small>All stock operations are tracked and logged in the transaction history below.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+        </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Transaction History</h3>
+        </div>
+        <div class="card-body">
+            @if (!transactions.Any())
+            {
+                <div class="alert alert-info">
+                    No transactions found for this inventory item.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Reference</th>
+                                <th>Date</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var transaction in transactions.OrderByDescending(t => t.TransactionDate))
+                            {
+                                <tr>
+                                    <td>@transaction.Id</td>
+                                    <td>
+                                        @if (transaction.Type == "StockIn")
+                                        {
+                                            <span class="badge bg-success">Stock In</span>
+                                        }
+                                        else if (transaction.Type == "StockOut")
+                                        {
+                                            <span class="badge bg-danger">Stock Out</span>
+                                        }
+                                        else if (transaction.Type == "Adjustment")
+                                        {
+                                            <span class="badge bg-warning">Adjustment</span>
+                                        }
+                                        else if (transaction.Type == "Transfer")
+                                        {
+                                            <span class="badge bg-info">Transfer</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@transaction.Type</span>
+                                        }
+                                    </td>
+                                    <td>@transaction.Quantity</td>
+                                    <td>@transaction.Reference</td>
+                                    <td>@transaction.TransactionDate.ToString("g")</td>
+                                    <td>@transaction.Notes</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add Stock Modal -->
+<div class="modal fade" id="addStockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="AddStock" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Stock</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="reference" class="form-label">Reference</label>
+                        <input type="text" class="form-control" id="reference" name="reference" placeholder="PO Number, Invoice Number, etc." />
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Stock Modal -->
+<div class="modal fade" id="removeStockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="RemoveStock" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Remove Stock</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="removeQuantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="removeQuantity" name="quantity" min="1" max="@Model.Quantity" value="1" required />
+                        <small class="form-text text-muted">Maximum available: @Model.Quantity</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="removeReference" class="form-label">Reference</label>
+                        <input type="text" class="form-control" id="removeReference" name="reference" placeholder="Order Number, Reason, etc." />
+                    </div>
+                    <div class="mb-3">
+                        <label for="removeNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="removeNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Remove Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect to SignalR
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('@Url.Content("~/hubs/inventory")')
+                .withAutomaticReconnect()
+                .build();
+
+            // Real-time update of inventory
+            connection.on("InventoryUpdated", (inventoryId, productId, quantity) => {
+                if (inventoryId === @Model.Id) {
+                    // Update the quantity display
+                    document.getElementById('current-quantity').textContent = quantity;
+
+                    // Show toast notification
+                    toastr.success(`Inventory updated! New quantity: ${quantity}`);
+
+                    // Update the status badge
+                    const badge = document.querySelector('.badge');
+                    if (quantity > 10) {
+                        badge.className = 'badge bg-success';
+                        badge.textContent = 'In Stock';
+                    } else if (quantity > 0) {
+                        badge.className = 'badge bg-warning';
+                        badge.textContent = 'Low Stock';
+                    } else {
+                        badge.className = 'badge bg-danger';
+                        badge.textContent = 'Out of Stock';
+                    }
+
+                    // Update max quantity for remove stock modal
+                    document.getElementById('removeQuantity').max = quantity;
+                }
+            });
+
+            // Low stock alert
+            connection.on("LowStockAlert", (inventoryId, productId, locationId, quantity, threshold) => {
+                if (inventoryId === @Model.Id) {
+                    toastr.warning(`Low stock alert! Quantity is now ${quantity}, below threshold of ${threshold}`);
+                }
+            });
+
+            // Start the connection
+            connection.start()
+                .then(() => console.log("Connected to Inventory hub"))
+                .catch(err => console.error("Error connecting to Inventory hub:", err));
+        });
+    </script>
+}

@@ -40,17 +40,67 @@ namespace InventoryManagement.Web.Services.ApiClients
             }
         }
 
-        public async Task<List<CategoryViewModel>> GetAllCategoriesAsync()
+        public async Task<List<ProductViewModel>> GetProductsByCategoryAsync(int categoryId)
         {
             try
             {
-                var categories = await _httpClient.GetFromJsonAsync<List<CategoryViewModel>>("api/v1/categories");
-                return categories ?? new List<CategoryViewModel>();
+                var products = await _httpClient.GetFromJsonAsync<List<ProductViewModel>>($"api/v1/products/by-category/{categoryId}");
+                return products ?? new List<ProductViewModel>();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all categories");
-                return new List<CategoryViewModel>();
+                _logger.LogError(ex, "Error getting products by category ID {CategoryId}", categoryId);
+                return new List<ProductViewModel>();
+            }
+        }
+
+        public async Task<ProductViewModel?> CreateProductAsync(ProductViewModel product)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/v1/products", product);
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<ProductViewModel>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating product");
+                return null;
+            }
+        }
+
+        public async Task<ProductViewModel?> UpdateProductAsync(int id, ProductViewModel product)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync($"api/v1/products/{id}", product);
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<ProductViewModel>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating product");
+                return null;
+            }
+        }
+
+        public async Task<bool> DeleteProductAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/v1/products/{id}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting product");
+                return false;
             }
         }
     }

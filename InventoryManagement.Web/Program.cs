@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using InventoryManagement.Web.Services.ApiClients;
 using InventoryManagement.Web.Services.RabbitMQ;
 using InventoryManagement.Web.Services.SignalR;
@@ -14,7 +13,17 @@ builder.Services.AddHttpClient<ProductApiClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["Services:ProductService"] ?? "http://localhost:5104/");
 });
 
+builder.Services.AddHttpClient<CategoryApiClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:ProductService"] ?? "http://localhost:5104/");
+});
+
 builder.Services.AddHttpClient<InventoryApiClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:InventoryService"] ?? "http://localhost:5105/");
+});
+
+builder.Services.AddHttpClient<LocationApiClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["Services:InventoryService"] ?? "http://localhost:5105/");
 });
@@ -42,7 +51,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios.
     app.UseHsts();
 }
 

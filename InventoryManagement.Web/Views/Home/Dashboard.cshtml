@@ -46,6 +46,39 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
+                    <h5>Total Sales</h5>
+                </div>
+                <div class="card-body">
+                    <h2 class="text-success">$@Model.TotalSales.ToString("N2")</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a asp-controller="Product" asp-action="Create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Add Product
+                        </a>
+                        <a asp-controller="Order" asp-action="Create" class="btn btn-success">
+                            <i class="bi bi-cart-plus"></i> New Order
+                        </a>
+                        <a asp-controller="Inventory" asp-action="Create" class="btn btn-info">
+                            <i class="bi bi-boxes"></i> Add Inventory
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
                     <h5>Recent Orders</h5>
                 </div>
                 <div class="card-body">
@@ -89,7 +122,7 @@
                 <div class="card-body">
                     @if (Model.OrdersByStatus.Any())
                     {
-                        <canvas id="orderStatusChart"></canvas>
+                        <canvas id="orderStatusChart" width="400" height="400"></canvas>
                     }
                     else
                     {
@@ -97,7 +130,11 @@
                     }
                 </div>
             </div>
+        </div>
+    </div>
 
+    <div class="row mt-4">
+        <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
                     <h5>Top Selling Products</h5>
@@ -105,7 +142,7 @@
                 <div class="card-body">
                     @if (Model.TopSellingProducts.Any())
                     {
-                        <canvas id="topProductsChart"></canvas>
+                        <canvas id="topProductsChart" width="400" height="400"></canvas>
                     }
                     else
                     {
@@ -114,10 +151,7 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-md-12">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h5>Real-time Updates</h5>
@@ -138,71 +172,81 @@
 
     <script>
         // Chart initialization for Order Status
-        const orderStatusLabels = @Json.Serialize(Model.OrdersByStatus.Keys);
-        const orderStatusData = @Json.Serialize(Model.OrdersByStatus.Values);
+        @if (Model.OrdersByStatus.Any())
+        {
+                <text>
+                const orderStatusLabels = @Html.Raw(Json.Serialize(Model.OrdersByStatus.Keys));
+                const orderStatusData = @Html.Raw(Json.Serialize(Model.OrdersByStatus.Values));
 
-        const orderStatusChart = new Chart(
-            document.getElementById('orderStatusChart'),
-            {
-                type: 'pie',
-                data: {
-                    labels: orderStatusLabels,
-                    datasets: [{
-                        data: orderStatusData,
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.6)',
-                            'rgba(54, 162, 235, 0.6)',
-                            'rgba(255, 206, 86, 0.6)',
-                            'rgba(75, 192, 192, 0.6)',
-                            'rgba(153, 102, 255, 0.6)'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'right',
+                const orderStatusChart = new Chart(
+                    document.getElementById('orderStatusChart'),
+                    {
+                        type: 'pie',
+                        data: {
+                            labels: orderStatusLabels,
+                            datasets: [{
+                                data: orderStatusData,
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.6)',
+                                    'rgba(54, 162, 235, 0.6)',
+                                    'rgba(255, 206, 86, 0.6)',
+                                    'rgba(75, 192, 192, 0.6)',
+                                    'rgba(153, 102, 255, 0.6)'
+                                ]
+                            }]
                         },
-                        title: {
-                            display: false
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                },
+                                title: {
+                                    display: false
+                                }
+                            }
                         }
                     }
-                }
-            }
-        );
+                );
+                </text>
+        }
 
         // Chart initialization for Top Selling Products
-        const topProductsLabels = @Json.Serialize(Model.TopSellingProducts.Keys);
-        const topProductsData = @Json.Serialize(Model.TopSellingProducts.Values);
+        @if (Model.TopSellingProducts.Any())
+        {
+                <text>
+                const topProductsLabels = @Html.Raw(Json.Serialize(Model.TopSellingProducts.Keys));
+                const topProductsData = @Html.Raw(Json.Serialize(Model.TopSellingProducts.Values));
 
-        const topProductsChart = new Chart(
-            document.getElementById('topProductsChart'),
-            {
-                type: 'bar',
-                data: {
-                    labels: topProductsLabels,
-                    datasets: [{
-                        label: 'Units Sold',
-                        data: topProductsData,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
+                const topProductsChart = new Chart(
+                    document.getElementById('topProductsChart'),
+                    {
+                        type: 'bar',
+                        data: {
+                            labels: topProductsLabels,
+                            datasets: [{
+                                label: 'Units Sold',
+                                data: topProductsData,
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
                         }
                     }
-                }
-            }
-        );
+                );
+                </text>
+        }
 
         // SignalR connections
         const productHubUrl = "@Url.Content("~/hubs/products")";

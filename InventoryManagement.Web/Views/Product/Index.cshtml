@@ -5,46 +5,76 @@
 }
 
 <div class="container mt-4">
-    <h1>Products</h1>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Products</h1>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Create New Product
+        </a>
+    </div>
 
-    <table class="table table-striped mt-4">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>SKU</th>
-                <th>Price</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="products-table-body">
-            @foreach (var product in Model)
+    <div class="card mt-4">
+        <div class="card-body">
+            @if (!Model.Any())
             {
-                <tr id="product-@product.Id">
-                    <td>@product.Id</td>
-                    <td>@product.Name</td>
-                    <td>@product.SKU</td>
-                    <td>$@product.Price.ToString("F2")</td>
-                    <td>@product.CategoryName</td>
-                    <td>
-                        @if (product.IsActive)
-                        {
-                            <span class="badge bg-success">Active</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-danger">Inactive</span>
-                        }
-                    </td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-primary">Details</a>
-                    </td>
-                </tr>
+                <div class="alert alert-info">
+                    No products found. Click the "Create New Product" button to add products.
+                </div>
             }
-        </tbody>
-    </table>
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>SKU</th>
+                                <th>Price</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                            @foreach (var product in Model)
+                            {
+                                <tr id="product-@product.Id">
+                                    <td>@product.Id</td>
+                                    <td>@product.Name</td>
+                                    <td>@product.SKU</td>
+                                    <td>$@product.Price.ToString("F2")</td>
+                                    <td>@product.CategoryName</td>
+                                    <td>
+                                        @if (product.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Inactive</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-info-circle"></i> Details
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-warning">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
+                                            <a asp-action="Delete" asp-route-id="@product.Id" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -58,9 +88,11 @@
 
             // Product created event
             connection.on("ProductCreated", (productId, name) => {
-                // In a real application, we'd fetch the full product details
-                // For demo purposes, we'll show a notification and could update the UI
                 toastr.success(`New product created: ${name}`);
+                // Refresh page after 2 seconds to show new product
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
             });
 
             // Product updated event
@@ -68,8 +100,7 @@
                 // Update the product row if it exists
                 const row = document.getElementById(`product-${productId}`);
                 if (row) {
-                    // For a real application, we'd update all fields
-                    // For this demo, we'll just highlight the row to show it changed
+                    // Highlight the row to show it changed
                     row.classList.add('table-warning');
                     setTimeout(() => {
                         row.classList.remove('table-warning');
