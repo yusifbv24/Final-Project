@@ -14,5 +14,4 @@ namespace OrderService.Application.DTOs
         public DateTime? UpdatedAt { get; init; }
         public List<OrderItemDto> Items { get; init; } = new List<OrderItemDto>();
     }
-
 }

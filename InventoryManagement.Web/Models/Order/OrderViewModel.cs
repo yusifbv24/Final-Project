@@ -18,6 +18,7 @@
         public OrderStatus Status { get; set; }
         public decimal TotalAmount { get; set; }
         public DateTime OrderDate { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         public List<OrderItemViewModel> Items { get; set; } = new List<OrderItemViewModel>();
     }
 }

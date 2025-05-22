@@ -5,154 +5,433 @@
 }
 
 <div class="container mt-4">
-    <h1>Order Details</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Order #@Model.Id</h1>
+        <div>
+            <span class="badge bg-@GetStatusColor(Model.Status) fs-6" id="order-status-badge">
+                @Model.Status
+            </span>
+        </div>
+    </div>
 
-    <div class="card mt-4">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3>Order #@Model.Id</h3>
-                <span class="badge bg-@GetStatusColor(Model.Status)">@Model.Status</span>
+    <div class="row">
+        <!-- Order Information -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-person-circle"></i> Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Name:</dt>
+                                <dd class="col-sm-8">@Model.CustomerName</dd>
+                                <dt class="col-sm-4">Email:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="mailto:@Model.CustomerEmail">@Model.CustomerEmail</a>
+                                </dd>
+                                <dt class="col-sm-4">Order Date:</dt>
+                                <dd class="col-sm-8">@Model.OrderDate.ToString("MMMM dd, yyyy 'at' h:mm tt")</dd>
+                                @if (Model.UpdatedAt.HasValue)
+                                {
+                                    <dt class="col-sm-4">Last Updated:</dt>
+                                    <dd class="col-sm-8">@Model.UpdatedAt.Value.ToString("MMMM dd, yyyy 'at' h:mm tt")</dd>
+                                }
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-truck"></i> Shipping Address</h6>
+                            <address class="text-muted">
+                                @Html.Raw(Model.ShippingAddress.Replace("\n", "<br>"))
+                            </address>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-box-seam"></i> Order Items (@Model.Items.Count)</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Items.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th class="text-center">Quantity</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.Items)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                         style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-box text-muted"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0">@item.ProductName</h6>
+                                                        <small class="text-muted">Product ID: @item.ProductId</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">@item.Quantity</span>
+                                            </td>
+                                            <td class="text-end">$@item.Price.ToString("N2")</td>
+                                            <td class="text-end">
+                                                <strong>$@((item.Price * item.Quantity).ToString("N2"))</strong>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <th colspan="3" class="text-end">Total Amount:</th>
+                                        <th class="text-end">
+                                            <h5 class="text-success mb-0">$@Model.TotalAmount.ToString("N2")</h5>
+                                        </th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-box text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3">No items in this order</p>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>Customer Information</h5>
-                    <dl class="row">
-                        <dt class="col-sm-4">Name:</dt>
-                        <dd class="col-sm-8">@Model.CustomerName</dd>
 
-                        <dt class="col-sm-4">Email:</dt>
-                        <dd class="col-sm-8">@Model.CustomerEmail</dd>
-
-                        <dt class="col-sm-4">Order Date:</dt>
-                        <dd class="col-sm-8">@Model.OrderDate.ToString("g")</dd>
-                    </dl>
+        <!-- Order Actions & Status -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-gear-fill"></i> Order Actions</h5>
                 </div>
-                <div class="col-md-6">
-                    <h5>Shipping Address</h5>
-                    <p>@Model.ShippingAddress</p>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Current Status</strong></label>
+                        <div class="p-3 bg-light rounded">
+                            <span class="badge bg-@GetStatusColor(Model.Status) fs-6" id="current-status-display">
+                                @Model.Status
+                            </span>
+                        </div>
+                    </div>
 
-                    <h5 class="mt-3">Order Status</h5>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            Update Status
-                        </button>
-                        <ul class="dropdown-menu">
-                            @foreach (var status in Enum.GetValues<InventoryManagement.Web.Models.Order.OrderStatus>())
+                    <div class="mb-3">
+                        <label for="statusSelect" class="form-label"><strong>Change Status</strong></label>
+                        <select id="statusSelect" class="form-select">
+                            <option value="">-- Select New Status --</option>
+                            @foreach (var status in Enum.GetValues<OrderStatus>())
                             {
-                                <li><a class="dropdown-item" href="#" data-status="@((int)status)">@status</a></li>
+                                if (status == Model.Status)
+                                {
+                                    <option value="@status" disabled>@status</option>
+                                }
+                                else
+                                {
+                                    <option value="@status">@status</option>
+                                }
                             }
-                        </ul>
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-100 mb-3" id="updateStatusBtn" disabled>
+                        <i class="bi bi-arrow-repeat"></i> Update Status
+                    </button>
+
+                    <hr>
+
+                    <div class="d-grid gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Orders
+                        </a>
+                        <button type="button" class="btn btn-outline-info" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Timeline -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-clock-history"></i> Order Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item active">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Order Created</h6>
+                                <small class="text-muted">@Model.OrderDate.ToString("MMM dd, yyyy h:mm tt")</small>
+                            </div>
+                        </div>
+                        @if (Model.Status != OrderStatus.Pending)
+                        {
+                            <div class="timeline-item active">
+                                <div class="timeline-marker bg-primary"></div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-1">Status: @Model.Status</h6>
+                                    @if (Model.UpdatedAt.HasValue)
+                                    {
+                                        <small class="text-muted">@Model.UpdatedAt.Value.ToString("MMM dd, yyyy h:mm tt")</small>
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="card mt-4">
-        <div class="card-header">
-            <h3>Order Items</h3>
-        </div>
-        <div class="card-body">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th class="text-end">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model.Items)
-                    {
-                        <tr>
-                            <td>@item.ProductName</td>
-                            <td>$@item.Price.ToString("F2")</td>
-                            <td>@item.Quantity</td>
-                            <td class="text-end">$@((item.Price * item.Quantity).ToString("F2"))</td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <th colspan="3" class="text-end">Total:</th>
-                        <th class="text-end">$@Model.TotalAmount.ToString("F2")</th>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        <div class="card-footer">
-            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+<!-- Status Update Confirmation Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Status Update</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="bi bi-question-circle text-warning" style="font-size: 3rem;"></i>
+                    <h4 class="mt-3">Update Order Status?</h4>
+                    <p>Are you sure you want to change the status of Order #@Model.Id?</p>
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>From:</strong><br>
+                                <span class="badge bg-@GetStatusColor(Model.Status)" id="modal-from-status">@Model.Status</span>
+                            </div>
+                            <div class="col-6">
+                                <strong>To:</strong><br>
+                                <span class="badge bg-secondary" id="modal-to-status">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmStatusUpdate">
+                    <i class="bi bi-check-circle"></i> Confirm Update
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+            .timeline::before {
+                content: '';
+                position: absolute;
+                left: 15px;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: #dee2e6;
+            }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -23px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #dee2e6;
+        }
+
+        .timeline-item.active .timeline-marker {
+            box-shadow: 0 0 0 2px #28a745;
+        }
+    </style>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Connect to SignalR
-            const connection = new signalR.HubConnectionBuilder()
-                .withUrl('@Url.Content("~/hubs/orders")')
-                .withAutomaticReconnect()
-                .build();
+            const statusSelect = document.getElementById('statusSelect');
+            const updateBtn = document.getElementById('updateStatusBtn');
+            const modal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+            let selectedStatus = '';
 
-            // Order status changed event
-            connection.on("OrderStatusChanged", (orderId, status) => {
-                if (orderId === @Model.Id) {
-                    // Update the status badge
-                    const statusBadge = document.querySelector('.badge');
-                    const statusColors = {
-                        'Pending': 'secondary',
-                        'Processing': 'primary',
-                        'Shipped': 'info',
-                        'Delivered': 'success',
-                        'Cancelled': 'danger'
-                    };
+            // Enable/disable update button based on selection
+            statusSelect.addEventListener('change', function() {
+                selectedStatus = this.value;
+                updateBtn.disabled = !selectedStatus;
 
-                    statusBadge.className = `badge bg-${statusColors[status] || 'secondary'}`;
-                    statusBadge.textContent = status;
-
-                    toastr.info(`Order status changed to ${status}`);
+                if (selectedStatus) {
+                    updateBtn.classList.remove('btn-primary');
+                    updateBtn.classList.add('btn-warning');
+                } else {
+                    updateBtn.classList.remove('btn-warning');
+                    updateBtn.classList.add('btn-primary');
                 }
             });
 
-            // Start the connection
+            // Show confirmation modal
+            updateBtn.addEventListener('click', function() {
+                if (selectedStatus) {
+                    document.getElementById('modal-to-status').textContent = selectedStatus;
+                    document.getElementById('modal-to-status').className = `badge bg-${getStatusColor(selectedStatus)}`;
+                    modal.show();
+                }
+            });
+
+            // Confirm status update
+            document.getElementById('confirmStatusUpdate').addEventListener('click', function() {
+                updateOrderStatus(selectedStatus);
+            });
+
+            function updateOrderStatus(status) {
+                const confirmBtn = document.getElementById('confirmStatusUpdate');
+                const originalText = confirmBtn.innerHTML;
+
+                // Show loading state
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+                confirmBtn.disabled = true;
+
+                fetch(`/Order/UpdateStatus?id=@Model.Id&status=${getStatusValue(status)}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(async response => {
+                    if (response.ok) {
+                        // Update UI directly since we know the status changed
+                        updateOrderStatusUI(status);
+                        modal.hide();
+                        showAlert('Status updated successfully!', 'success');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                })
+                .catch(error => {
+                    console.error('Error updating order status:', error);
+                    showAlert('Failed to update order status. Please try again.', 'danger');
+                })
+                .finally(() => {
+                    confirmBtn.innerHTML = originalText;
+                    confirmBtn.disabled = false;
+                });
+            }
+
+            function updateOrderStatusUI(newStatus) {
+                // Update all status displays
+                const statusElements = [
+                    document.getElementById('order-status-badge'),
+                    document.getElementById('current-status-display')
+                ];
+
+                statusElements.forEach(element => {
+                    if (element) {
+                        element.textContent = newStatus;
+                        element.className = element.className.replace(/bg-\w+/, `bg-${getStatusColor(newStatus)}`);
+                    }
+                });
+
+                // Reset form
+                statusSelect.value = '';
+                updateBtn.disabled = true;
+                updateBtn.classList.remove('btn-warning');
+                updateBtn.classList.add('btn-primary');
+
+                // Update disabled options
+                Array.from(statusSelect.options).forEach(option => {
+                    option.disabled = option.value === newStatus;
+                });
+            }
+
+            function getStatusColor(status) {
+                const colors = {
+                    'Pending': 'secondary',
+                    'Processing': 'primary',
+                    'Shipped': 'info',
+                    'Delivered': 'success',
+                    'Cancelled': 'danger'
+                };
+                return colors[status] || 'secondary';
+            }
+
+            function getStatusValue(status) {
+                const values = {
+                    'Pending': 0,
+                    'Processing': 1,
+                    'Shipped': 2,
+                    'Delivered': 3,
+                    'Cancelled': 4
+                };
+                return values[status] || 0;
+            }
+
+            function showAlert(message, type) {
+                const alertContainer = document.createElement('div');
+                alertContainer.innerHTML = `
+                    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+
+                document.querySelector('.container').insertBefore(alertContainer, document.querySelector('.container').firstChild);
+
+                setTimeout(() => {
+                    alertContainer.remove();
+                }, 5000);
+            }
+
+            // SignalR connection
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/orders')
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("OrderStatusChanged", (orderId, status) => {
+                if (orderId == @Model.Id) {
+                    updateOrderStatusUI(status);
+                    showAlert(`Order status updated to ${status}`, 'info');
+                }
+            });
+
             connection.start()
                 .then(() => console.log("Connected to Order hub"))
                 .catch(err => console.error("Error connecting to Order hub:", err));
-
-            // Handle status update clicks
-            document.querySelectorAll('.dropdown-item').forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-
-                    const status = this.getAttribute('data-status');
-
-                    // Call API to update status
-                    fetch(`/Order/UpdateStatus?id=@Model.Id&status=${status}`, {
-                        method: 'POST'
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Status update failed');
-                        }
-                        // Success is handled by SignalR notification
-                    })
-                    .catch(error => {
-                        console.error('Error updating order status:', error);
-                        toastr.error('Error updating order status');
-                    });
-                });
-            });
         });
     </script>
 }
 
 @functions {
-    string GetStatusColor(InventoryManagement.Web.Models.Order.OrderStatus status)
+    string GetStatusColor(OrderStatus status)
     {
         return status switch
         {

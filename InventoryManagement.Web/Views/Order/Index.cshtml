@@ -5,139 +5,271 @@
 }
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Orders</h1>
         <a asp-action="Create" class="btn btn-success">
             <i class="bi bi-plus-circle"></i> Create New Order
         </a>
     </div>
 
-    <table class="table table-striped mt-4">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Customer</th>
-                <th>Date</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="orders-table-body">
-            @foreach (var order in Model)
+    <div class="card">
+        <div class="card-body">
+            @if (!Model.Any())
             {
-                <tr id="order-@order.Id">
-                    <td>@order.Id</td>
-                    <td>@order.CustomerName</td>
-                    <td>@order.OrderDate.ToString("g")</td>
-                    <td>$@order.TotalAmount.ToString("F2")</td>
-                    <td>
-                        <span class="badge bg-@GetStatusColor(order.Status)">@order.Status</span>
-                    </td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-primary">Details</a>
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                Update Status
-                            </button>
-                            <ul class="dropdown-menu">
-                                @foreach (var status in Enum.GetValues<InventoryManagement.Web.Models.Order.OrderStatus>())
-                                {
-                                    <li><a class="dropdown-item" href="#" data-order-id="@order.Id" data-status="@((int)status)">@status</a></li>
-                                }
-                            </ul>
-                        </div>
-                    </td>
-                </tr>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No orders found. Click "Create New Order" to add your first order.
+                </div>
             }
-        </tbody>
-    </table>
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Email</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in Model.OrderBy(o => o.OrderDate).Reverse())
+                            {
+                                <tr id="order-row-@order.Id">
+                                    <td>
+                                        <strong>#@order.Id</strong>
+                                    </td>
+                                    <td>@order.CustomerName</td>
+                                    <td>@order.CustomerEmail</td>
+                                    <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                                    <td>
+                                        <strong class="text-success">$@order.TotalAmount.ToString("N2")</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@GetStatusColor(order.Status) status-badge" id="status-@order.Id">
+                                            @order.Status
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="bi bi-arrow-repeat"></i> Status
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    @foreach (var status in Enum.GetValues<OrderStatus>())
+                                                    {
+                                                        <li>
+                                                            @if (status == order.Status)
+                                                            {
+                                                                <button class="dropdown-item status-update-btn"
+                                                                        data-order-id="@order.Id"
+                                                                        data-status="@status"
+                                                                        disabled>
+                                                                    <span class="badge bg-@GetStatusColor(status) me-2">@status</span>
+                                                                    @status
+                                                                </button>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button class="dropdown-item status-update-btn"
+                                                                        data-order-id="@order.Id"
+                                                                        data-status="@status">
+                                                                    <span class="badge bg-@GetStatusColor(status) me-2">@status</span>
+                                                                    @status
+                                                                </button>
+                                                            }
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Order Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to update the status of Order <strong id="modal-order-number"></strong>?</p>
+                <div class="alert alert-info">
+                    <strong>From:</strong> <span id="modal-current-status"></span><br>
+                    <strong>To:</strong> <span id="modal-new-status"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusUpdate">
+                    <i class="bi bi-check-circle"></i> Update Status
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Connect to SignalR
+            const statusUpdateModal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+            let currentOrderId = null;
+            let newStatus = null;
+
+            // Handle status update button clicks
+            document.querySelectorAll('.status-update-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    currentOrderId = this.getAttribute('data-order-id');
+                    newStatus = this.getAttribute('data-status');
+
+                    const currentStatusElement = document.getElementById(`status-${currentOrderId}`);
+                    const currentStatus = currentStatusElement.textContent.trim();
+
+                    // Update modal content
+                    document.getElementById('modal-order-number').textContent = `#${currentOrderId}`;
+                    document.getElementById('modal-current-status').textContent = currentStatus;
+                    document.getElementById('modal-new-status').textContent = newStatus;
+
+                    statusUpdateModal.show();
+                });
+            });
+
+            // Confirm status update
+            document.getElementById('confirmStatusUpdate').addEventListener('click', function() {
+                updateOrderStatus(selectedStatus);
+            });
+
+            function updateOrderStatus(status) {
+                const confirmBtn = document.getElementById('confirmStatusUpdate');
+                const originalText = confirmBtn.innerHTML;
+
+                // Show loading state
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+                confirmBtn.disabled = true;
+
+                fetch(`/Order/UpdateStatus?id=@Model.Id&status=${getStatusValue(status)}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(async response => {
+                    if (response.ok) {
+                        // Update UI directly since we know the status changed
+                        updateOrderStatusUI(status);
+                        modal.hide();
+                        showAlert('Status updated successfully!', 'success');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                })
+                .catch(error => {
+                    console.error('Error updating order status:', error);
+                    showAlert('Failed to update order status. Please try again.', 'danger');
+                })
+                .finally(() => {
+                    confirmBtn.innerHTML = originalText;
+                    confirmBtn.disabled = false;
+                });
+            }
+
+            function getStatusValue(status) {
+                const values = {
+                    'Pending': 0,
+                    'Processing': 1,
+                    'Shipped': 2,
+                    'Delivered': 3,
+                    'Cancelled': 4
+                };
+                return values[status] || 0;
+            }
+
+            function showToast(title, message, type) {
+                const toastContainer = document.getElementById('toast-container') || createToastContainer();
+                const toastId = 'toast-' + Date.now();
+                const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+
+                const toastHTML = `
+                    <div id="${toastId}" class="toast ${bgClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header ${bgClass} text-white border-0">
+                            <strong class="me-auto">${title}</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+
+                toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+                const toast = new bootstrap.Toast(document.getElementById(toastId));
+                toast.show();
+
+                // Remove toast after it's hidden
+                document.getElementById(toastId).addEventListener('hidden.bs.toast', function() {
+                    this.remove();
+                });
+            }
+
+            function createToastContainer() {
+                const container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                container.style.zIndex = '1070';
+                document.body.appendChild(container);
+                return container;
+            }
+
+            // SignalR connection for real-time updates
             const connection = new signalR.HubConnectionBuilder()
-                .withUrl('@Url.Content("~/hubs/orders")')
+                .withUrl('/hubs/orders')
                 .withAutomaticReconnect()
                 .build();
 
-            // Order created event
-            connection.on("OrderCreated", (orderId, customerName) => {
-                toastr.success(`New order created: #${orderId} from ${customerName}`);
-
-                // In a real app, we would refresh the data or add the new order to the table
-                setTimeout(() => {
-                    window.location.reload();
-                }, 3000);
-            });
-
-            // Order status changed event
             connection.on("OrderStatusChanged", (orderId, status) => {
-                const row = document.getElementById(`order-${orderId}`);
-                if (row) {
-                    // Update status badge
-                    const statusBadge = row.querySelector('.badge');
-                    if (statusBadge) {
-                        const statusColors = {
-                            'Pending': 'secondary',
-                            'Processing': 'primary',
-                            'Shipped': 'info',
-                            'Delivered': 'success',
-                            'Cancelled': 'danger'
-                        };
+                const statusBadge = document.getElementById(`status-${orderId}`);
+                if (statusBadge) {
+                    statusBadge.textContent = status;
+                    statusBadge.className = `badge bg-${getStatusColor(status)} status-badge`;
 
-                        statusBadge.className = `badge bg-${statusColors[status] || 'secondary'}`;
-                        statusBadge.textContent = status;
-
-                        // Highlight the row
+                    const row = document.getElementById(`order-row-${orderId}`);
+                    if (row) {
                         row.classList.add('table-warning');
-                        setTimeout(() => {
-                            row.classList.remove('table-warning');
-                        }, 3000);
-
-                        toastr.info(`Order #${orderId} status changed to ${status}`);
+                        setTimeout(() => row.classList.remove('table-warning'), 3000);
                     }
                 }
             });
 
-            // Start the connection
             connection.start()
                 .then(() => console.log("Connected to Order hub"))
                 .catch(err => console.error("Error connecting to Order hub:", err));
-
-            // Handle status update clicks
-            document.querySelectorAll('.dropdown-item').forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-
-                    const orderId = this.getAttribute('data-order-id');
-                    const status = this.getAttribute('data-status');
-
-                    // Call API to update status
-                    fetch(`/Order/UpdateStatus?id=${orderId}&status=${status}`, {
-                        method: 'POST'
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Status update failed');
-                        }
-                        // Success is handled by SignalR notification
-                    })
-                    .catch(error => {
-                        console.error('Error updating order status:', error);
-                        toastr.error('Error updating order status');
-                    });
-                });
-            });
         });
     </script>
 }
 
 @functions {
-    string GetStatusColor(InventoryManagement.Web.Models.Order.OrderStatus status)
+    string GetStatusColor(OrderStatus status)
     {
         return status switch
         {
