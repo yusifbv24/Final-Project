@@ -102,15 +102,41 @@ namespace InventoryManagement.Web.Services.SignalR
             _rabbitMQListener = rabbitMQListener;
             _logger = logger;
 
-            // Forward SignalR events
+            // Ensure connection is established before setting up event handlers
+            Task.Run(async () =>
+            {
+                await _orderHubClient.StartAsync();
+                SetupEventHandlers();
+            });
+        }
+
+        private void SetupEventHandlers()
+        {
+            // Forward SignalR events from OrderHubClient
             _orderHubClient.OrderCreated += async (orderId, customerName) =>
             {
-                await Clients.All.SendAsync("OrderCreated", orderId, customerName);
+                try
+                {
+                    _logger.LogInformation("Forwarding OrderCreated event: {OrderId} - {CustomerName}", orderId, customerName);
+                    await Clients.All.SendAsync("OrderCreated", orderId, customerName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error forwarding OrderCreated event");
+                }
             };
 
             _orderHubClient.OrderStatusChanged += async (orderId, status) =>
             {
-                await Clients.All.SendAsync("OrderStatusChanged", orderId, status);
+                try
+                {
+                    _logger.LogInformation("Forwarding OrderStatusChanged event: {OrderId} - {Status}", orderId, status);
+                    await Clients.All.SendAsync("OrderStatusChanged", orderId, status);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error forwarding OrderStatusChanged event");
+                }
             };
 
             // Forward RabbitMQ events
@@ -118,9 +144,36 @@ namespace InventoryManagement.Web.Services.SignalR
             {
                 if (routingKey.StartsWith("order."))
                 {
-                    await Clients.All.SendAsync("MessageReceived", routingKey, message);
+                    try
+                    {
+                        _logger.LogInformation("Forwarding RabbitMQ message: {RoutingKey}", routingKey);
+                        await Clients.All.SendAsync("MessageReceived", routingKey, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error forwarding RabbitMQ message");
+                    }
                 }
             };
+        }
+
+        public override async Task OnConnectedAsync()
+        {
+            _logger.LogInformation("Client connected to OrderHubProxy: {ConnectionId}", Context.ConnectionId);
+
+            // Ensure the OrderHubClient is connected
+            if (!_orderHubClient.IsConnected)
+            {
+                await _orderHubClient.StartAsync();
+            }
+
+            await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            _logger.LogInformation("Client disconnected from OrderHubProxy: {ConnectionId}", Context.ConnectionId);
+            await base.OnDisconnectedAsync(exception);
         }
     }
 }

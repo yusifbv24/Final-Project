@@ -70,17 +70,31 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Start SignalR clients
+// Start SignalR clients with proper error handling
 using (var scope = app.Services.CreateScope())
 {
-    var productHubClient = scope.ServiceProvider.GetRequiredService<ProductHubClient>();
-    var inventoryHubClient = scope.ServiceProvider.GetRequiredService<InventoryHubClient>();
-    var orderHubClient = scope.ServiceProvider.GetRequiredService<OrderHubClient>();
+    var serviceProvider = scope.ServiceProvider;
+    var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
-    // Start connections asynchronously
-    _ = productHubClient.StartAsync();
-    _ = inventoryHubClient.StartAsync();
-    _ = orderHubClient.StartAsync();
+    try
+    {
+        var productHubClient = serviceProvider.GetRequiredService<ProductHubClient>();
+        var inventoryHubClient = serviceProvider.GetRequiredService<InventoryHubClient>();
+        var orderHubClient = serviceProvider.GetRequiredService<OrderHubClient>();
+
+        // Start connections with proper awaiting
+        await Task.WhenAll(
+            productHubClient.StartAsync(),
+            inventoryHubClient.StartAsync(),
+            orderHubClient.StartAsync()
+        );
+
+        logger.LogInformation("All SignalR hub clients started successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error starting SignalR hub clients");
+    }
 }
 
 app.Run();
