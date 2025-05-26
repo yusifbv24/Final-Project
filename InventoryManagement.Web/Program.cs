@@ -1,3 +1,4 @@
+using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.ApiClients;
 using InventoryManagement.Web.Services.RabbitMQ;
 using InventoryManagement.Web.Services.SignalR;
@@ -45,6 +46,9 @@ builder.Services.AddSingleton<OrderHubClient>();
 builder.Services.AddSingleton<RabbitMQListener>();
 builder.Services.AddHostedService<RabbitMQListener>();
 
+// Add background service to manage hub connections
+builder.Services.AddHostedService<HubConnectionManager>();
+
 // Add CORS for SignalR
 builder.Services.AddCors(options =>
 {
@@ -60,6 +64,10 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
+
+// Configure logging
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
 var app = builder.Build();
 
@@ -87,39 +95,5 @@ app.MapHub<OrderHubProxy>("/hubs/orders");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
-// Start SignalR clients after app is built
-var serviceProvider = app.Services;
-
-// Ensure SignalR clients are started after a delay to allow services to be ready
-var _ = Task.Run(async () =>
-{
-    await Task.Delay(5000); // Wait 5 seconds for services to start
-
-    using var scope = serviceProvider.CreateScope();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-    try
-    {
-        var productHubClient = serviceProvider.GetRequiredService<ProductHubClient>();
-        var inventoryHubClient = serviceProvider.GetRequiredService<InventoryHubClient>();
-        var orderHubClient = serviceProvider.GetRequiredService<OrderHubClient>();
-
-        await productHubClient.StartAsync();
-        logger.LogInformation("Product hub client started");
-
-        await inventoryHubClient.StartAsync();
-        logger.LogInformation("Inventory hub client started");
-
-        await orderHubClient.StartAsync();
-        logger.LogInformation("Order hub client started");
-
-        logger.LogInformation("All SignalR hub clients started successfully");
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Error starting SignalR hub clients");
-    }
-});
 
 app.Run();

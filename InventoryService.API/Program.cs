@@ -43,14 +43,19 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Add SignalR
 builder.Services.AddSignalR();
 
-// Add CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("SignalRPolicy", builder =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        builder.WithOrigins(
+            "http://localhost:5147",     // Web app URL
+            "https://localhost:7109",    // Web app HTTPS URL
+            "http://localhost:5107",     // Docker web app URL
+            "http://web-app"            // Docker service name
+        )
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials();  // Required for SignalR
     });
 });
 
@@ -73,7 +78,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowAll");
+app.UseCors("SignalRPolicy");
 
 // Custom exception handling middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
