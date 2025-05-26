@@ -1,6 +1,5 @@
 using Asp.Versioning.ApiExplorer;
 using Asp.Versioning;
-using InventoryService.API.Hubs;
 using System.Text.Json.Serialization;
 using InventoryService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +7,7 @@ using InventoryService.API.Middleware;
 using InventoryService.Application;
 using InventoryService.Infrastructure;
 using InventoryService.API.SwaggerConfiguration;
+using InventoryService.Application.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 

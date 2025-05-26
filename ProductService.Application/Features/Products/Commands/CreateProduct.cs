@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using ProductService.Application.DTOs;
 using ProductService.Application.Events;
+using ProductService.Application.Hubs;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Exceptions;
@@ -44,19 +46,23 @@ namespace ProductService.Application.Features.Products.Commands
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMapper _mapper;
             private readonly IMessagePublisher _messagePublisher;
+            private readonly IHubContext<ProductHub> _hubContext;
+
 
             public Handler(
                 IProductRepository productRepository,
                 ICategoryRepository categoryRepository,
                 IUnitOfWork unitOfWork,
                 IMapper mapper,
-                IMessagePublisher messagePublisher)
+                IMessagePublisher messagePublisher,
+                IHubContext<ProductHub> hubContext)
             {
                 _productRepository = productRepository;
                 _categoryRepository = categoryRepository;
                 _unitOfWork = unitOfWork;
                 _mapper = mapper;
                 _messagePublisher = messagePublisher;
+                _hubContext = hubContext;
             }
 
             public async Task<ProductDto> Handle(Command request, CancellationToken cancellationToken)
@@ -82,6 +88,9 @@ namespace ProductService.Application.Features.Products.Commands
                         product.CreatedAt),
                     "product.created",
                     cancellationToken);
+
+                // Notify via SignalR
+                await _hubContext.Clients.All.SendAsync("ProductCreated", product.Id, product.Name, cancellationToken);
 
                 // Fetch with category details
                 var savedProduct = await _productRepository.GetByIdAsync(result.Id, cancellationToken);

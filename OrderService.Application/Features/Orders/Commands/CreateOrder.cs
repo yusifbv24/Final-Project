@@ -1,8 +1,9 @@
-﻿using AutoMapper;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using OrderService.Application.DTOs;
 using OrderService.Application.Events;
+using OrderService.Application.Hubs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Repositories;
@@ -48,7 +49,8 @@ namespace OrderService.Application.Features.Orders.Commands
             private readonly IInventoryServiceClient _inventoryServiceClient;
             private readonly IMessagePublisher _messagePublisher;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMapper _mapper;
+            private readonly IHubContext<OrderHub> _hubContext;
+
 
             public Handler(
                 IOrderRepository orderRepository,
@@ -56,14 +58,14 @@ namespace OrderService.Application.Features.Orders.Commands
                 IInventoryServiceClient inventoryServiceClient,
                 IMessagePublisher messagePublisher,
                 IUnitOfWork unitOfWork,
-                IMapper mapper)
+                IHubContext<OrderHub> hubContext)
             {
                 _orderRepository = orderRepository;
                 _productServiceClient = productServiceClient;
                 _inventoryServiceClient = inventoryServiceClient;
                 _messagePublisher = messagePublisher;
                 _unitOfWork = unitOfWork;
-                _mapper = mapper;
+                _hubContext = hubContext;
             }
 
             public async Task<OrderDto> Handle(Command request, CancellationToken cancellationToken)
@@ -100,7 +102,7 @@ namespace OrderService.Application.Features.Orders.Commands
                 }
 
                 // Save order
-                var result = await _orderRepository.AddAsync(order, cancellationToken);
+                await _orderRepository.AddAsync(order, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Reserve inventory for each order item
@@ -113,22 +115,47 @@ namespace OrderService.Application.Features.Orders.Commands
                         cancellationToken);
                 }
 
-                // Publish order created event
-                await _messagePublisher.PublishAsync(
-                    new OrderCreatedEvent
+                // Publish to RabbitMQ
+                var orderCreatedEvent = new OrderCreatedEvent
+                {
+                    OrderId = order.Id,
+                    CustomerName = order.CustomerName,
+                    Status = order.Status,
+                    TotalAmount = order.TotalAmount,
+                    OrderDate = order.OrderDate,
+                    Items = order.OrderItems.Select(i => new OrderItemEvent
                     {
-                        OrderId = order.Id,
-                        CustomerName = order.CustomerName,
-                        Status = order.Status,
-                        TotalAmount = order.TotalAmount,
-                        OrderDate = order.OrderDate,
-                        Items = order.OrderItems.Select(i => new OrderCreatedEvent.OrderItemDetail(i.ProductId, i.Quantity))
-                    },
-                    "order.created",
-                    cancellationToken);
+                        ProductId = i.ProductId,
+                        ProductName = i.ProductName,
+                        Price = i.Price,
+                        Quantity = i.Quantity
+                    }).ToList()
+                };
 
-                // Return mapped DTO
-                return _mapper.Map<OrderDto>(result);
+                await _messagePublisher.PublishAsync(orderCreatedEvent, "order.created", cancellationToken);
+
+                // Notify via SignalR
+                await _hubContext.Clients.All.SendAsync("OrderCreated", order.Id, order.CustomerName, cancellationToken);
+
+                return new OrderDto
+                {
+                    Id = order.Id,
+                    CustomerName = order.CustomerName,
+                    CustomerEmail = order.CustomerEmail,
+                    ShippingAddress = order.ShippingAddress,
+                    Status = order.Status,
+                    TotalAmount = order.TotalAmount,
+                    OrderDate = order.OrderDate,
+                    UpdatedAt = order.UpdatedAt,
+                    Items = order.OrderItems.Select(i => new OrderItemDto
+                    {
+                        Id = i.Id,
+                        ProductId = i.ProductId,
+                        ProductName = i.ProductName,
+                        Price = i.Price,
+                        Quantity = i.Quantity
+                    }).ToList()
+                };
             }
         }
     }

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using OrderService.Domain.Entities;
 
-namespace OrderService.API.Hubs
+namespace OrderService.Application.Hubs
 {
     public class OrderHub : Hub
     {

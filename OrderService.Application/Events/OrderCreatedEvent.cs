@@ -6,11 +6,11 @@ namespace OrderService.Application.Events
     {
         public int OrderId { get; init; }
         public string CustomerName { get; init; } = string.Empty;
+        public string CustomerEmail { get; set; } = string.Empty;
         public OrderStatus Status { get; init; }
         public decimal TotalAmount { get; init; }
         public DateTime OrderDate { get; init; }
-        public IEnumerable<OrderItemDetail> Items { get; init; } = new List<OrderItemDetail>();
+        public IEnumerable<OrderItemEvent> Items { get; init; } = new List<OrderItemEvent>();
 
-        public record OrderItemDetail(int ProductId, int Quantity);
     }
 }

@@ -1,6 +1,5 @@
 using Asp.Versioning.ApiExplorer;
 using Asp.Versioning;
-using OrderService.API.Hubs;
 using System.Text.Json.Serialization;
 using OrderService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +7,7 @@ using OrderService.API.Middleware;
 using OrderService.Application;
 using OrderService.Infrastructure;
 using OrderService.API.SwaggerConfiguration;
+using OrderService.Application.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 

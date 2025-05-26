@@ -1,6 +1,5 @@
 using Asp.Versioning.ApiExplorer;
 using Asp.Versioning;
-using ProductService.API.Hubs;
 using ProductService.API.Middleware;
 using ProductService.API.SwaggerConfiguration;
 using ProductService.Application;
@@ -8,6 +7,7 @@ using System.Text.Json.Serialization;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using ProductService.Application.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 

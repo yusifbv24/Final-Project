@@ -2,10 +2,12 @@
 using FluentValidation;
 using InventoryService.Application.DTOs;
 using InventoryService.Application.Events;
+using InventoryService.Application.Hubs;
 using InventoryService.Application.Interfaces;
 using InventoryService.Domain.Exceptions;
 using InventoryService.Domain.Repositories;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 
 namespace InventoryService.Application.Features.Inventory.Commands
 {
@@ -36,6 +38,8 @@ namespace InventoryService.Application.Features.Inventory.Commands
             private readonly IMessagePublisher _messagePublisher;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMapper _mapper;
+            private readonly IHubContext<InventoryHub> _hubContext;
+
 
             public Handler(
                 IInventoryRepository inventoryRepository,
@@ -43,7 +47,8 @@ namespace InventoryService.Application.Features.Inventory.Commands
                 IProductServiceClient productServiceClient,
                 IMessagePublisher messagePublisher,
                 IUnitOfWork unitOfWork,
-                IMapper mapper)
+                IMapper mapper,
+                IHubContext<InventoryHub> hubContext)
             {
                 _inventoryRepository = inventoryRepository;
                 _locationRepository = locationRepository;
@@ -51,6 +56,7 @@ namespace InventoryService.Application.Features.Inventory.Commands
                 _messagePublisher = messagePublisher;
                 _unitOfWork = unitOfWork;
                 _mapper = mapper;
+                _hubContext = hubContext;
             }
 
             public async Task<InventoryDto> Handle(Command request, CancellationToken cancellationToken)
@@ -79,6 +85,21 @@ namespace InventoryService.Application.Features.Inventory.Commands
                 var inventory = _mapper.Map<Domain.Entities.Inventory>(request.InventoryDto);
                 var result = await _inventoryRepository.AddAsync(inventory, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Publish to RabbitMQ
+                var inventoryCreatedEvent = new InventoryCreatedEvent
+                {
+                    InventoryId = inventory.Id,
+                    ProductId = inventory.ProductId,
+                    LocationId = inventory.LocationId,
+                    Quantity = inventory.Quantity,
+                    CreatedAt = inventory.CreatedAt
+                };
+
+                await _messagePublisher.PublishAsync(inventoryCreatedEvent, "inventory.created", cancellationToken);
+
+                // Notify via SignalR
+                await _hubContext.Clients.All.SendAsync("InventoryUpdated", inventory.Id, inventory.ProductId, inventory.Quantity, cancellationToken);
 
                 // Publish inventory created event
                 await _messagePublisher.PublishAsync(
