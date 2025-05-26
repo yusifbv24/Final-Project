@@ -48,7 +48,6 @@ namespace ProductService.Application.Features.Products.Commands
             private readonly IMessagePublisher _messagePublisher;
             private readonly IHubContext<ProductHub> _hubContext;
 
-
             public Handler(
                 IProductRepository productRepository,
                 ICategoryRepository categoryRepository,

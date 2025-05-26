@@ -50,3 +50,35 @@ body {
 .table-warning {
     transition: background-color 1.5s ease;
 }
+
+#notifications {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+    #notifications .list-group-item {
+        border-left: 4px solid #007bff;
+        margin-bottom: 5px;
+        border-radius: 4px;
+    }
+
+/* Color-coded notification types */
+.list-group-item-success {
+    border-left-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.list-group-item-warning {
+    border-left-color: #ffc107;
+    background-color: #fffef5;
+}
+
+.list-group-item-danger {
+    border-left-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.list-group-item-info {
+    border-left-color: #17a2b8;
+    background-color: #f1fdff;
+}

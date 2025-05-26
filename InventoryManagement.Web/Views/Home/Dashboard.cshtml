@@ -153,13 +153,59 @@
         </div>
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>Real-time Updates</h5>
+                    <div>
+                        <span id="connection-status-indicator" class="badge bg-secondary" title="SignalR Connection Status">
+                            <i class="bi bi-wifi-off"></i> Connecting...
+                        </span>
+                        <button id="clear-notifications" class="btn btn-sm btn-outline-secondary ms-2" title="Clear all notifications">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <button id="test-connection" class="btn btn-sm btn-outline-primary ms-1" title="Test SignalR connection">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div id="notifications" class="list-group" style="max-height: 300px; overflow-y: auto;">
-                        <div class="list-group-item">Waiting for real-time updates...</div>
+                    <div id="notifications" class="list-group" style="max-height: 350px; overflow-y: auto;">
+                        <div class="list-group-item list-group-item-light text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Initializing real-time connections...
+                        </div>
                     </div>
+                    <div class="mt-2 text-center">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            Real-time notifications will appear here when events occur
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Status Modal -->
+    <div class="modal fade" id="connectionStatusModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">SignalR Connection Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="detailed-connection-status">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                            <p class="mt-2">Checking connection status...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="reconnect-all">
+                        <i class="bi bi-arrow-clockwise"></i> Reconnect All
+                    </button>
                 </div>
             </div>
         </div>
@@ -168,166 +214,733 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script>
         // Chart initialization for Order Status
         @if (Model.OrdersByStatus.Any())
         {
-                <text>
-                const orderStatusLabels = @Html.Raw(Json.Serialize(Model.OrdersByStatus.Keys));
-                const orderStatusData = @Html.Raw(Json.Serialize(Model.OrdersByStatus.Values));
+                    <text>
+                    const orderStatusLabels = @Html.Raw(Json.Serialize(Model.OrdersByStatus.Keys));
+                    const orderStatusData = @Html.Raw(Json.Serialize(Model.OrdersByStatus.Values));
 
-                const orderStatusChart = new Chart(
-                    document.getElementById('orderStatusChart'),
-                    {
-                        type: 'pie',
-                        data: {
-                            labels: orderStatusLabels,
-                            datasets: [{
-                                data: orderStatusData,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.6)',
-                                    'rgba(54, 162, 235, 0.6)',
-                                    'rgba(255, 206, 86, 0.6)',
-                                    'rgba(75, 192, 192, 0.6)',
-                                    'rgba(153, 102, 255, 0.6)'
-                                ]
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    position: 'right',
-                                },
-                                title: {
-                                    display: false
+                    const orderStatusChart = new Chart(
+                        document.getElementById('orderStatusChart'),
+                        {
+                            type: 'pie',
+                            data: {
+                                labels: orderStatusLabels,
+                                datasets: [{
+                                    data: orderStatusData,
+                                    backgroundColor: [
+                                        'rgba(255, 99, 132, 0.8)',
+                                        'rgba(54, 162, 235, 0.8)',
+                                        'rgba(255, 206, 86, 0.8)',
+                                        'rgba(75, 192, 192, 0.8)',
+                                        'rgba(153, 102, 255, 0.8)',
+                                        'rgba(255, 159, 64, 0.8)'
+                                    ],
+                                    borderColor: [
+                                        'rgba(255, 99, 132, 1)',
+                                        'rgba(54, 162, 235, 1)',
+                                        'rgba(255, 206, 86, 1)',
+                                        'rgba(75, 192, 192, 1)',
+                                        'rgba(153, 102, 255, 1)',
+                                        'rgba(255, 159, 64, 1)'
+                                    ],
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                    },
+                                    title: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const label = context.label || '';
+                                                const value = context.parsed || 0;
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const percentage = ((value / total) * 100).toFixed(1);
+                                                return `${label}: ${value} (${percentage}%)`;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                );
-                </text>
+                    );
+                    </text>
         }
 
         // Chart initialization for Top Selling Products
         @if (Model.TopSellingProducts.Any())
         {
-                <text>
-                const topProductsLabels = @Html.Raw(Json.Serialize(Model.TopSellingProducts.Keys));
-                const topProductsData = @Html.Raw(Json.Serialize(Model.TopSellingProducts.Values));
+                    <text>
+                    const topProductsLabels = @Html.Raw(Json.Serialize(Model.TopSellingProducts.Keys));
+                    const topProductsData = @Html.Raw(Json.Serialize(Model.TopSellingProducts.Values));
 
-                const topProductsChart = new Chart(
-                    document.getElementById('topProductsChart'),
-                    {
-                        type: 'bar',
-                        data: {
-                            labels: topProductsLabels,
-                            datasets: [{
-                                label: 'Units Sold',
-                                data: topProductsData,
-                                backgroundColor: 'rgba(54, 162, 235, 0.6)'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    display: false
-                                }
+                    const topProductsChart = new Chart(
+                        document.getElementById('topProductsChart'),
+                        {
+                            type: 'bar',
+                            data: {
+                                labels: topProductsLabels,
+                                datasets: [{
+                                    label: 'Units Sold',
+                                    data: topProductsData,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 2,
+                                    borderRadius: 4,
+                                    borderSkipped: false,
+                                }]
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            title: function(context) {
+                                                return `Product: ${context[0].label}`;
+                                            },
+                                            label: function(context) {
+                                                return `Units Sold: ${context.parsed.y}`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Units Sold'
+                                        }
+                                    },
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Products'
+                                        }
+                                    }
+                                },
+                                animation: {
+                                    duration: 1000,
+                                    easing: 'easeOutQuart'
                                 }
                             }
                         }
-                    }
-                );
-                </text>
+                    );
+                    </text>
         }
 
-        // SignalR connections
-        const productHubUrl = "@Url.Content("~/hubs/products")";
-        const inventoryHubUrl = "@Url.Content("~/hubs/inventory")";
-        const orderHubUrl = "@Url.Content("~/hubs/orders")";
+        // Advanced SignalR Connection Management
+        class SignalRDashboardManager {
+            constructor() {
+                this.connections = {};
+                this.reconnectAttempts = {};
+                this.maxReconnectAttempts = 5;
+                this.reconnectDelay = 2000;
+                this.eventCounts = {
+                    product: 0,
+                    inventory: 0,
+                    order: 0
+                };
+                this.isInitialized = false;
 
-        // Function to add notification
-        function addNotification(message) {
-            const notifications = document.getElementById('notifications');
-            const item = document.createElement('div');
-            item.className = 'list-group-item';
+                // Bind methods to preserve 'this' context
+                this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+                this.handleOnline = this.handleOnline.bind(this);
+                this.handleOffline = this.handleOffline.bind(this);
 
-            const timestamp = new Date().toLocaleTimeString();
-            item.innerHTML = `<small class="text-muted">${timestamp}</small> ${message}`;
+                // Setup page visibility and network status listeners
+                document.addEventListener('visibilitychange', this.handleVisibilityChange);
+                window.addEventListener('online', this.handleOnline);
+                window.addEventListener('offline', this.handleOffline);
+            }
 
-            notifications.insertBefore(item, notifications.firstChild);
+            async createConnection(name, url) {
+                try {
+                    const connection = new signalR.HubConnectionBuilder()
+                        .withUrl(url)
+                        .withAutomaticReconnect([0, 2000, 10000, 30000])
+                        .configureLogging(signalR.LogLevel.Information)
+                        .build();
 
-            // Remove first notification if there are more than 10
-            if (notifications.children.length > 10) {
-                notifications.removeChild(notifications.lastChild);
+                    // Connection event handlers
+                    connection.onclose((error) => {
+                        console.warn(`${name} hub connection closed:`, error);
+                        this.updateConnectionStatus();
+                        if (error) {
+                            this.addNotification(`❌ ${name} connection lost: ${error.message}`, 'error', true);
+                        } else {
+                            this.addNotification(`⚠️ ${name} connection closed`, 'warning');
+                        }
+                    });
+
+                    connection.onreconnecting((error) => {
+                        console.log(`${name} hub reconnecting:`, error);
+                        this.updateConnectionStatus();
+                        this.addNotification(`🔄 ${name} reconnecting...`, 'info');
+                    });
+
+                    connection.onreconnected((connectionId) => {
+                        console.log(`${name} hub reconnected:`, connectionId);
+                        this.updateConnectionStatus();
+                        this.addNotification(`✅ ${name} reconnected successfully`, 'success');
+                        this.reconnectAttempts[name] = 0; // Reset attempts on successful reconnection
+                    });
+
+                    this.connections[name] = connection;
+                    return connection;
+                } catch (error) {
+                    console.error(`Error creating ${name} connection:`, error);
+                    this.addNotification(`❌ Failed to create ${name} connection: ${error.message}`, 'error', true);
+                    throw error;
+                }
+            }
+
+            async startConnection(name, connection) {
+                try {
+                    await connection.start();
+                    console.log(`${name} hub connected successfully`);
+                    this.updateConnectionStatus();
+
+                    if (!this.isInitialized) {
+                        this.addNotification(`✅ ${name} hub connected`, 'success');
+                    }
+
+                    this.reconnectAttempts[name] = 0;
+                    return true;
+                } catch (error) {
+                    console.error(`Error connecting to ${name} hub:`, error);
+                    this.updateConnectionStatus();
+
+                    // Retry connection with exponential backoff
+                    this.reconnectAttempts[name] = (this.reconnectAttempts[name] || 0) + 1;
+
+                    if (this.reconnectAttempts[name] < this.maxReconnectAttempts) {
+                        const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts[name] - 1);
+                        this.addNotification(`⚠️ ${name} connection failed, retrying in ${delay/1000}s... (${this.reconnectAttempts[name]}/${this.maxReconnectAttempts})`, 'warning');
+
+                        setTimeout(() => {
+                            this.startConnection(name, connection);
+                        }, delay);
+                    } else {
+                        this.addNotification(`❌ ${name} connection failed after ${this.maxReconnectAttempts} attempts`, 'error', true);
+                    }
+                    return false;
+                }
+            }
+
+            addNotification(message, type = 'info', persistent = false) {
+                const notifications = document.getElementById('notifications');
+                if (!notifications) return;
+
+                // Remove initialization message if it exists
+                const initMsg = notifications.querySelector('.spinner-border');
+                if (initMsg && initMsg.parentElement) {
+                    initMsg.parentElement.remove();
+                }
+
+                const item = document.createElement('div');
+                const typeClass = type === 'error' ? 'danger' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info';
+                item.className = `list-group-item list-group-item-${typeClass} notification-item`;
+
+                const timestamp = new Date().toLocaleTimeString();
+                const icon = this.getNotificationIcon(type);
+
+                item.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block mb-1">${timestamp}</small>
+                            <div>${icon} ${message}</div>
+                        </div>
+                        ${!persistent ? '<button type="button" class="btn-close btn-sm" aria-label="Close"></button>' : ''}
+                    </div>
+                `;
+
+                notifications.insertBefore(item, notifications.firstChild);
+
+                // Add close functionality
+                const closeBtn = item.querySelector('.btn-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        item.remove();
+                    });
+                }
+
+                // Remove old notifications (keep max 15)
+                while (notifications.children.length > 15) {
+                    notifications.removeChild(notifications.lastChild);
+                }
+
+                // Auto remove after 10 seconds for non-persistent messages
+                if (!persistent && type !== 'error') {
+                    setTimeout(() => {
+                        if (item.parentNode) {
+                            item.style.transition = 'opacity 0.3s ease';
+                            item.style.opacity = '0';
+                            setTimeout(() => {
+                                if (item.parentNode) {
+                                    item.remove();
+                                }
+                            }, 300);
+                        }
+                    }, 10000);
+                }
+
+                // Scroll to top of notifications
+                notifications.scrollTop = 0;
+            }
+
+            getNotificationIcon(type) {
+                switch (type) {
+                    case 'success': return '<i class="bi bi-check-circle-fill text-success"></i>';
+                    case 'error': return '<i class="bi bi-exclamation-triangle-fill text-danger"></i>';
+                    case 'warning': return '<i class="bi bi-exclamation-circle-fill text-warning"></i>';
+                    case 'info': return '<i class="bi bi-info-circle-fill text-info"></i>';
+                    default: return '<i class="bi bi-bell-fill"></i>';
+                }
+            }
+
+            updateConnectionStatus() {
+                const statusIndicator = document.getElementById('connection-status-indicator');
+                if (!statusIndicator) return;
+
+                const connectedConnections = Object.values(this.connections).filter(c =>
+                    c.state === signalR.HubConnectionState.Connected
+                );
+                const totalConnections = Object.keys(this.connections).length;
+                const connectedCount = connectedConnections.length;
+
+                if (connectedCount === 0) {
+                    statusIndicator.className = 'badge bg-danger';
+                    statusIndicator.innerHTML = '<i class="bi bi-wifi-off"></i> Disconnected';
+                } else if (connectedCount === totalConnections) {
+                    statusIndicator.className = 'badge bg-success';
+                    statusIndicator.innerHTML = '<i class="bi bi-wifi"></i> Connected';
+                } else {
+                    statusIndicator.className = 'badge bg-warning';
+                    statusIndicator.innerHTML = `<i class="bi bi-wifi-1"></i> ${connectedCount}/${totalConnections}`;
+                }
+
+                statusIndicator.title = `SignalR Status: ${connectedCount}/${totalConnections} connections active`;
+            }
+
+            async checkConnectionStatus() {
+                try {
+                    const response = await fetch('/SignalRTest/GetConnectionStatus');
+                    const status = await response.json();
+                    return status;
+                } catch (error) {
+                    console.error('Error checking connection status:', error);
+                    return null;
+                }
+            }
+
+            async showDetailedStatus() {
+                const modal = new bootstrap.Modal(document.getElementById('connectionStatusModal'));
+                const statusContainer = document.getElementById('detailed-connection-status');
+
+                modal.show();
+
+                try {
+                    const status = await this.checkConnectionStatus();
+                    if (status) {
+                        statusContainer.innerHTML = `
+                            <div class="row">
+                                <div class="col-md-4 text-center">
+                                    <div class="card ${status.ProductHub.IsConnected ? 'border-success' : 'border-danger'}">
+                                        <div class="card-body">
+                                            <i class="bi bi-box-seam ${status.ProductHub.IsConnected ? 'text-success' : 'text-danger'}" style="font-size: 2rem;"></i>
+                                            <h6 class="card-title mt-2">Product Hub</h6>
+                                            <span class="badge bg-${status.ProductHub.IsConnected ? 'success' : 'danger'}">${status.ProductHub.State}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="card ${status.InventoryHub.IsConnected ? 'border-success' : 'border-danger'}">
+                                        <div class="card-body">
+                                            <i class="bi bi-boxes ${status.InventoryHub.IsConnected ? 'text-success' : 'text-danger'}" style="font-size: 2rem;"></i>
+                                            <h6 class="card-title mt-2">Inventory Hub</h6>
+                                            <span class="badge bg-${status.InventoryHub.IsConnected ? 'success' : 'danger'}">${status.InventoryHub.State}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="card ${status.OrderHub.IsConnected ? 'border-success' : 'border-danger'}">
+                                        <div class="card-body">
+                                            <i class="bi bi-cart3 ${status.OrderHub.IsConnected ? 'text-success' : 'text-danger'}" style="font-size: 2rem;"></i>
+                                            <h6 class="card-title mt-2">Order Hub</h6>
+                                            <span class="badge bg-${status.OrderHub.IsConnected ? 'success' : 'danger'}">${status.OrderHub.State}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">Last checked: ${new Date(status.Timestamp).toLocaleString()}</small>
+                            </div>
+                        `;
+                    } else {
+                        statusContainer.innerHTML = '<div class="alert alert-danger">Failed to retrieve connection status</div>';
+                    }
+                } catch (error) {
+                    statusContainer.innerHTML = '<div class="alert alert-danger">Error loading connection status</div>';
+                }
+            }
+
+            async reconnectAll() {
+                this.addNotification('🔄 Attempting to reconnect all hubs...', 'info');
+
+                for (const [name, connection] of Object.entries(this.connections)) {
+                    if (connection.state !== signalR.HubConnectionState.Connected) {
+                        try {
+                            if (connection.state === signalR.HubConnectionState.Disconnected) {
+                                await this.startConnection(name, connection);
+                            }
+                        } catch (error) {
+                            console.error(`Error reconnecting ${name}:`, error);
+                        }
+                    }
+                }
+            }
+
+            clearNotifications() {
+                const notifications = document.getElementById('notifications');
+                if (notifications) {
+                    notifications.innerHTML = '<div class="list-group-item list-group-item-light text-center text-muted"><i class="bi bi-check-circle"></i> All notifications cleared</div>';
+                }
+            }
+
+            // Page visibility change handler
+            handleVisibilityChange() {
+                if (document.hidden) {
+                    console.log('Page hidden - pausing reconnection attempts');
+                } else {
+                    console.log('Page visible - resuming normal operation');
+                    this.updateConnectionStatus();
+                    // Check connections when page becomes visible
+                    setTimeout(() => {
+                        this.reconnectAll();
+                    }, 1000);
+                }
+            }
+
+            // Network status handlers
+            handleOnline() {
+                this.addNotification('🌐 Network connection restored', 'success');
+                setTimeout(() => {
+                    this.reconnectAll();
+                }, 2000);
+            }
+
+            handleOffline() {
+                this.addNotification('📡 Network connection lost', 'warning', true);
+                this.updateConnectionStatus();
+            }
+
+            // Cleanup method
+            destroy() {
+                document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+                window.removeEventListener('online', this.handleOnline);
+                window.removeEventListener('offline', this.handleOffline);
+
+                // Close all connections
+                Object.values(this.connections).forEach(connection => {
+                    if (connection.state !== signalR.HubConnectionState.Disconnected) {
+                        connection.stop();
+                    }
+                });
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Connect to SignalR hubs
-            const productConnection = new signalR.HubConnectionBuilder()
-                .withUrl(productHubUrl)
-                .withAutomaticReconnect()
-                .build();
+        // Initialize SignalR Dashboard Manager
+        let signalRManager;
 
-            const inventoryConnection = new signalR.HubConnectionBuilder()
-                .withUrl(inventoryHubUrl)
-                .withAutomaticReconnect()
-                .build();
+        document.addEventListener('DOMContentLoaded', async function() {
+            signalRManager = new SignalRDashboardManager();
 
-            const orderConnection = new signalR.HubConnectionBuilder()
-                .withUrl(orderHubUrl)
-                .withAutomaticReconnect()
-                .build();
-
-            // Product hub event handlers
-            productConnection.on("ProductCreated", (productId, name) => {
-                addNotification(`<span class="text-success"><i class="bi bi-plus-circle"></i> New product created: ${name} (ID: ${productId})</span>`);
+            // Setup UI event handlers
+            document.getElementById('clear-notifications')?.addEventListener('click', () => {
+                signalRManager.clearNotifications();
             });
 
-            productConnection.on("ProductUpdated", (productId, name) => {
-                addNotification(`<span class="text-primary"><i class="bi bi-pencil"></i> Product updated: ${name} (ID: ${productId})</span>`);
+            document.getElementById('test-connection')?.addEventListener('click', () => {
+                signalRManager.showDetailedStatus();
             });
 
-            // Inventory hub event handlers
-            inventoryConnection.on("InventoryUpdated", (inventoryId, productId, quantity) => {
-                addNotification(`<span class="text-info"><i class="bi bi-arrow-repeat"></i> Inventory updated: Product ID ${productId} - New quantity: ${quantity}</span>`);
+            document.getElementById('connection-status-indicator')?.addEventListener('click', () => {
+                signalRManager.showDetailedStatus();
             });
 
-            inventoryConnection.on("LowStockAlert", (inventoryId, productId, locationId, quantity, threshold) => {
-                addNotification(`<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Low stock alert: Product ID ${productId} at Location ID ${locationId} - Quantity: ${quantity}/${threshold}</span>`);
+            document.getElementById('reconnect-all')?.addEventListener('click', () => {
+                signalRManager.reconnectAll();
             });
 
-            // Order hub event handlers
-            orderConnection.on("OrderCreated", (orderId, customerName) => {
-                addNotification(`<span class="text-success"><i class="bi bi-cart-plus"></i> New order from ${customerName} (Order ID: ${orderId})</span>`);
-            });
+            // Initialize connections
+            try {
+                // Product Hub
+                const productConnection = await signalRManager.createConnection('Product', '@Url.Content("~/hubs/products")');
 
-            orderConnection.on("OrderStatusChanged", (orderId, status) => {
-                addNotification(`<span class="text-primary"><i class="bi bi-arrow-right-circle"></i> Order #${orderId} status changed to ${status}</span>`);
-            });
+                productConnection.on("ProductCreated", (productId, name) => {
+                    signalRManager.eventCounts.product++;
+                    signalRManager.addNotification(`<strong>New product created:</strong> ${name} <span class="badge bg-primary ms-1">#${productId}</span>`, 'success');
+                });
 
-            // Start the connections
-            productConnection.start()
-                .then(() => console.log("Connected to Product hub"))
-                .catch(err => console.error("Error connecting to Product hub:", err));
+                productConnection.on("ProductUpdated", (productId, name) => {
+                    signalRManager.eventCounts.product++;
+                    signalRManager.addNotification(`<strong>Product updated:</strong> ${name} <span class="badge bg-primary ms-1">#${productId}</span>`, 'info');
+                });
 
-            inventoryConnection.start()
-                .then(() => console.log("Connected to Inventory hub"))
-                .catch(err => console.error("Error connecting to Inventory hub:", err));
+                productConnection.on("ProductDeleted", (productId) => {
+                    signalRManager.eventCounts.product++;
+                    signalRManager.addNotification(`<strong>Product deleted</strong> <span class="badge bg-primary ms-1">#${productId}</span>`, 'warning');
+                });
 
-            orderConnection.start()
-                .then(() => console.log("Connected to Order hub"))
-                .catch(err => console.error("Error connecting to Order hub:", err));
+                await signalRManager.startConnection('Product', productConnection);
+
+                // Inventory Hub
+                const inventoryConnection = await signalRManager.createConnection('Inventory', '@Url.Content("~/hubs/inventory")');
+
+                inventoryConnection.on("InventoryUpdated", (inventoryId, productId, quantity) => {
+                    signalRManager.eventCounts.inventory++;
+                    const quantityClass = quantity > 10 ? 'success' : quantity > 0 ? 'warning' : 'danger';
+                    signalRManager.addNotification(`<strong>Inventory updated:</strong> Product #${productId} - <span class="badge bg-${quantityClass}">${quantity} units</span>`, 'info');
+                });
+
+                inventoryConnection.on("LowStockAlert", (inventoryId, productId, locationId, quantity, threshold) => {
+                    signalRManager.eventCounts.inventory++;
+                    signalRManager.addNotification(`<strong>⚠️ Low stock alert:</strong> Product #${productId} at Location #${locationId} - <span class="badge bg-danger">${quantity}/${threshold}</span>`, 'warning', true);
+                });
+
+                inventoryConnection.on("InventoryTransactionCreated", (transactionId, inventoryId, productId, type, quantity) => {
+                    signalRManager.eventCounts.inventory++;
+                    const typeClass = type === 'StockIn' ? 'success' : 'warning';
+                    signalRManager.addNotification(`<strong>Inventory transaction:</strong> ${type} - Product #${productId} <span class="badge bg-${typeClass}">${quantity} units</span>`, 'info');
+                });
+
+                await signalRManager.startConnection('Inventory', inventoryConnection);
+
+                // Order Hub
+                const orderConnection = await signalRManager.createConnection('Order', '@Url.Content("~/hubs/orders")');
+
+                orderConnection.on("OrderCreated", (orderId, customerName) => {
+                    signalRManager.eventCounts.order++;
+                    signalRManager.addNotification(`<strong>New order:</strong> ${customerName} <span class="badge bg-success ms-1">#${orderId}</span>`, 'success');
+                });
+
+                orderConnection.on("OrderStatusChanged", (orderId, status) => {
+                    signalRManager.eventCounts.order++;
+                    const statusClass = status === 'Delivered' ? 'success' : status === 'Cancelled' ? 'danger' : 'info';
+                    signalRManager.addNotification(`<strong>Order status:</strong> #${orderId} → <span class="badge bg-${statusClass}">${status}</span>`, 'info');
+                });
+
+                await signalRManager.startConnection('Order', orderConnection);
+
+                // Final initialization
+                signalRManager.isInitialized = true;
+
+                // Show final connection status after all connections are attempted
+                setTimeout(() => {
+                    const connectedCount = Object.values(signalRManager.connections).filter(c =>
+                        c.state === signalR.HubConnectionState.Connected
+                    ).length;
+                    const totalConnections = Object.keys(signalRManager.connections).length;
+
+                    if (connectedCount === totalConnections && totalConnections > 0) {
+                        signalRManager.addNotification(`🎉 All ${totalConnections} SignalR connections established successfully!`, 'success');
+                    } else if (connectedCount > 0) {
+                        signalRManager.addNotification(`⚠️ ${connectedCount}/${totalConnections} SignalR connections established`, 'warning', true);
+                    } else {
+                        signalRManager.addNotification(`❌ No SignalR connections established. <a href="/SignalRTest/TestSignalR" class="alert-link">Test connections</a>`, 'error', true);
+                    }
+
+                    signalRManager.updateConnectionStatus();
+                }, 3000);
+
+            } catch (error) {
+                console.error('Failed to initialize SignalR connections:', error);
+                signalRManager.addNotification(`❌ Failed to initialize SignalR: ${error.message}`, 'error', true);
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (signalRManager) {
+                signalRManager.destroy();
+            }
         });
     </script>
+
+    <style>
+        /* Notification Styling */
+        #notifications {
+            max-height: 350px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #6c757d #e9ecef;
+        }
+
+            #notifications::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            #notifications::-webkit-scrollbar-track {
+                background: #e9ecef;
+                border-radius: 3px;
+            }
+
+            #notifications::-webkit-scrollbar-thumb {
+                background: #6c757d;
+                border-radius: 3px;
+            }
+
+                #notifications::-webkit-scrollbar-thumb:hover {
+                    background: #495057;
+                }
+
+            #notifications .list-group-item {
+                border-left: 4px solid #007bff;
+                margin-bottom: 8px;
+                border-radius: 6px;
+                transition: all 0.3s ease;
+                animation: slideInRight 0.3s ease-out;
+            }
+
+                #notifications .list-group-item:hover {
+                    transform: translateX(2px);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+
+            #notifications .list-group-item-success {
+                border-left-color: #28a745;
+                background-color: #f8fff9;
+                color: #155724;
+            }
+
+            #notifications .list-group-item-warning {
+                border-left-color: #ffc107;
+                background-color: #fffef5;
+                color: #856404;
+            }
+
+            #notifications .list-group-item-danger {
+                border-left-color: #dc3545;
+                background-color: #fff5f5;
+                color: #721c24;
+            }
+
+            #notifications .list-group-item-info {
+                border-left-color: #17a2b8;
+                background-color: #f1fdff;
+                color: #0c5460;
+            }
+
+            #notifications .list-group-item-light {
+                border-left-color: #6c757d;
+                background-color: #f8f9fa;
+                color: #6c757d;
+            }
+
+        /* Connection Status Indicator */
+        #connection-status-indicator {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+
+            #connection-status-indicator:hover {
+                transform: scale(1.05);
+            }
+
+        /* Button Styling */
+        #clear-notifications, #test-connection {
+            transition: all 0.2s ease;
+        }
+
+            #clear-notifications:hover, #test-connection:hover {
+                transform: translateY(-1px);
+            }
+
+        .notification-item .btn-close {
+            font-size: 0.75rem;
+            padding: 0.25rem;
+        }
+
+        /* Chart Container Styling */
+        #orderStatusChart, #topProductsChart {
+            max-height: 300px;
+        }
+
+        /* Card Enhancements */
+        .card {
+            transition: box-shadow 0.2s ease;
+        }
+
+            .card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+
+        /* Modal Enhancements */
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+
+            .modal-header .btn-close {
+                filter: invert(1);
+            }
+
+
+        .card-body .display-4 {
+            font-size: 2rem;
+        }
+
+        .d-flex.gap-2 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+
+        /* Badge Enhancements */
+        .badge {
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        /* Loading States */
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        /* Notification Close Button */
+        .notification-item .btn-close {
+            --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='m.235 1.027 4.896 4.896 4.896-4.896a.75.75 0 0 1 1.06 1.06L6.19 6.984l4.896 4.896a.75.75 0 1 1-1.06 1.06L5.13 8.043.235 12.939a.75.75 0 0 1-1.06-1.06L4.07 6.984.235 2.087a.75.75 0 0 1 1.06-1.06z'/%3e%3c/svg%3e");
+            opacity: 0.6;
+        }
+
+            .notification-item .btn-close:hover {
+                opacity: 1;
+            }
+    </style>
 }
 
 @functions {

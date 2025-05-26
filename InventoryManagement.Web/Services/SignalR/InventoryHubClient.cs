@@ -10,6 +10,8 @@ namespace InventoryManagement.Web.Services.SignalR
         public event Action<int, int, int>? InventoryUpdated;
         public event Action<int, int, int, string, int>? InventoryTransactionCreated;
         public event Action<int, int, int, int, int>? LowStockAlert;
+        private bool _isConnected = false;
+        public bool IsConnected => _isConnected && _hubConnection.State == HubConnectionState.Connected;
 
         public InventoryHubClient(IConfiguration configuration, ILogger<InventoryHubClient> logger)
         {
@@ -43,18 +45,45 @@ namespace InventoryManagement.Web.Services.SignalR
                         productId, locationId, quantity, threshold);
                     LowStockAlert?.Invoke(inventoryId, productId, locationId, quantity, threshold);
                 });
+
+            _hubConnection.Closed += async (error) => {
+                _isConnected = false;
+                _logger.LogWarning("Connection to Inventory hub closed. Error: {Error}", error?.Message);
+                await Task.Delay(new Random().Next(0, 5) * 1000);
+                await StartAsync();
+            };
+
+            _hubConnection.Reconnected += (connectionId) => {
+                _isConnected = true;
+                _logger.LogInformation("Reconnected to Inventory hub. ConnectionId: {ConnectionId}", connectionId);
+                return Task.CompletedTask;
+            };
+
+            _hubConnection.Reconnecting += (error) => {
+                _isConnected = false;
+                _logger.LogWarning("Reconnecting to Inventory hub. Error: {Error}", error?.Message);
+                return Task.CompletedTask;
+            };
         }
 
         public async Task StartAsync()
         {
-            try
+            if (_hubConnection.State == HubConnectionState.Disconnected)
             {
-                await _hubConnection.StartAsync();
-                _logger.LogInformation("Connected to Inventory hub");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error connecting to Inventory hub");
+                try
+                {
+                    await _hubConnection.StartAsync();
+                    _isConnected = true;
+                    _logger.LogInformation("Connected to Inventory hub");
+                }
+                catch (Exception ex)
+                {
+                    _isConnected = false;
+                    _logger.LogError(ex, "Error connecting to Inventory hub");
+                    // Retry after 5 seconds
+                    await Task.Delay(5000);
+                    await StartAsync();
+                }
             }
         }
 

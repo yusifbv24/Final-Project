@@ -14,7 +14,7 @@ namespace InventoryManagement.Web.Services
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
+            {
             // Wait for the application to start
             await Task.Delay(5000, stoppingToken);
 

@@ -2,6 +2,9 @@ using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.ApiClients;
 using InventoryManagement.Web.Services.RabbitMQ;
 using InventoryManagement.Web.Services.SignalR;
+using ProductService.Application.Hubs;
+using InventoryService.Application.Hubs;
+using OrderService.Application.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +52,14 @@ builder.Services.AddHostedService<RabbitMQListener>();
 // Add background service to manage hub connections
 builder.Services.AddHostedService<HubConnectionManager>();
 
+// Register the new hubs
+builder.Services.AddSingleton<ProductHub>();
+builder.Services.AddSingleton<InventoryHub>();
+builder.Services.AddSingleton<OrderHub>();
+
+// Register the event forwarder
+builder.Services.AddHostedService<SignalREventForwarder>();
+
 // Add CORS for SignalR
 builder.Services.AddCors(options =>
 {
@@ -88,9 +99,9 @@ app.UseCors("SignalRPolicy");
 app.UseAuthorization();
 
 // Map SignalR hub proxies
-app.MapHub<ProductHubProxy>("/hubs/products");
-app.MapHub<InventoryHubProxy>("/hubs/inventory");
-app.MapHub<OrderHubProxy>("/hubs/orders");
+app.MapHub<ProductHub>("/hubs/products");
+app.MapHub<InventoryHub>("/hubs/inventory");
+app.MapHub<OrderHub>("/hubs/orders");
 
 app.MapControllerRoute(
     name: "default",

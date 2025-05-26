@@ -11,6 +11,9 @@ namespace InventoryManagement.Web.Services.SignalR
         public event Action<int, string>? ProductUpdated;
         public event Action<int>? ProductDeleted;
 
+        private bool _isConnected = false;
+        public bool IsConnected => _isConnected && _hubConnection.State == HubConnectionState.Connected;
+
         public ProductHubClient(IConfiguration configuration, ILogger<ProductHubClient> logger)
         {
             _logger = logger;
@@ -38,18 +41,45 @@ namespace InventoryManagement.Web.Services.SignalR
                 _logger.LogInformation("Product deleted: {ProductId}", productId);
                 ProductDeleted?.Invoke(productId);
             });
+
+            _hubConnection.Closed += async (error) => {
+                _isConnected = false;
+                _logger.LogWarning("Connection to Product hub closed. Error: {Error}", error?.Message);
+                await Task.Delay(new Random().Next(0, 5) * 1000);
+                await StartAsync();
+            };
+
+            _hubConnection.Reconnected += (connectionId) => {
+                _isConnected = true;
+                _logger.LogInformation("Reconnected to Product hub. ConnectionId: {ConnectionId}", connectionId);
+                return Task.CompletedTask;
+            };
+
+            _hubConnection.Reconnecting += (error) => {
+                _isConnected = false;
+                _logger.LogWarning("Reconnecting to Product hub. Error: {Error}", error?.Message);
+                return Task.CompletedTask;
+            };
         }
 
         public async Task StartAsync()
         {
-            try
+            if (_hubConnection.State == HubConnectionState.Disconnected)
             {
-                await _hubConnection.StartAsync();
-                _logger.LogInformation("Connected to Product hub");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error connecting to Product hub");
+                try
+                {
+                    await _hubConnection.StartAsync();
+                    _isConnected = true;
+                    _logger.LogInformation("Connected to Product hub");
+                }
+                catch (Exception ex)
+                {
+                    _isConnected = false;
+                    _logger.LogError(ex, "Error connecting to Product hub");
+                    // Retry after 5 seconds
+                    await Task.Delay(5000);
+                    await StartAsync();
+                }
             }
         }
 
