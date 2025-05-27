@@ -11,7 +11,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d
     networks:
       - microservices-network
 
@@ -34,7 +33,7 @@ services:
       - postgres
       - rabbitmq
     ports:
-      - "5104:80"
+      - "5104:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=postgres;Password=mysecretpassword;Port=5432
@@ -55,7 +54,7 @@ services:
       - rabbitmq
       - product-service
     ports:
-      - "5105:80"
+      - "5105:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=inventory_service;Username=postgres;Password=mysecretpassword;Port=5432
@@ -78,7 +77,7 @@ services:
       - product-service
       - inventory-service
     ports:
-      - "5106:80"
+      - "5106:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=order_service;Username=postgres;Password=mysecretpassword;Port=5432
@@ -98,27 +97,3 @@ networks:
 
 volumes:
   postgres-data:
-
- web-app:
-    build:
-      context: ./InventoryManagement.Web
-      dockerfile: Dockerfile
-    depends_on:
-      - product-service
-      - inventory-service
-      - order-service
-      - rabbitmq
-    ports:
-      - "5107:80"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - Services__ProductService=http://product-service
-      - Services__InventoryService=http://inventory-service
-      - Services__OrderService=http://order-service
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Port=5672
-      - RabbitMQ__Username=guest
-      - RabbitMQ__Password=guest
-      - RabbitMQ__VirtualHost=/
-    networks:
-      - microservices-network
