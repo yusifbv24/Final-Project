@@ -1,4 +1,3 @@
-using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.ApiClients;
 using InventoryManagement.Web.Services.RabbitMQ;
 using InventoryManagement.Web.Services.SignalR;
@@ -46,7 +45,6 @@ builder.Services.AddSingleton<InventoryHubClient>();
 builder.Services.AddSingleton<OrderHubClient>();
 
 // Register RabbitMQ listener as a hosted service
-builder.Services.AddSingleton<RabbitMQListener>();
 builder.Services.AddHostedService<RabbitMQListener>();
 
 // Add background service to manage hub connections

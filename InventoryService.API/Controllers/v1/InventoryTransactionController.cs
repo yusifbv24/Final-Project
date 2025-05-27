@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using InventoryService.Application.DTOs;
+using InventoryService.Application.Features.InventoryTransaction.Commands;
 using InventoryService.Application.Features.InventoryTransaction.Queries;
 using InventoryService.Domain.Exceptions;
 using MediatR;

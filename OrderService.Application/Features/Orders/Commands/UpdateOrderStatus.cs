@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using OrderService.Application.DTOs;
 using OrderService.Application.Events;
+using OrderService.Application.Hubs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Exceptions;
 using OrderService.Domain.Repositories;
@@ -28,17 +30,21 @@ namespace OrderService.Application.Features.Orders.Commands
             private readonly IMessagePublisher _messagePublisher;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMapper _mapper;
+            private readonly IHubContext<OrderHub> _orderHubContext;
+
 
             public Handler(
                 IOrderRepository orderRepository,
                 IMessagePublisher messagePublisher,
                 IUnitOfWork unitOfWork,
-                IMapper mapper)
+                IMapper mapper,
+                IHubContext<OrderHub> orderHubContext)
             {
                 _orderRepository = orderRepository;
                 _messagePublisher = messagePublisher;
                 _unitOfWork = unitOfWork;
                 _mapper = mapper;
+                _orderHubContext = orderHubContext;
             }
 
             public async Task<OrderDto> Handle(Command request, CancellationToken cancellationToken)
@@ -67,6 +73,9 @@ namespace OrderService.Application.Features.Orders.Commands
                     },
                     "order.status.changed",
                     cancellationToken);
+
+                // Notify clients via SignalR
+                await _orderHubContext.Clients.All.SendAsync("OrderStatusChanged", order.Id, order.Status.ToString());
 
                 // Return mapped DTO
                 return _mapper.Map<OrderDto>(order);

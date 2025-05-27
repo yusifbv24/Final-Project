@@ -7,6 +7,8 @@ using InventoryService.Domain.Entities;
 using InventoryService.Domain.Exceptions;
 using InventoryService.Domain.Repositories;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
+using InventoryService.Application.Hubs;
 
 namespace InventoryService.Application.Features.Inventory.Commands
 {
@@ -39,19 +41,22 @@ namespace InventoryService.Application.Features.Inventory.Commands
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMessagePublisher _messagePublisher;
             private readonly IMapper _mapper;
+            private readonly IHubContext<InventoryHub> _hubContext;
 
             public Handler(
                 IInventoryRepository inventoryRepository,
                 IInventoryTransactionRepository transactionRepository,
                 IUnitOfWork unitOfWork,
                 IMessagePublisher messagePublisher,
-                IMapper mapper)
+                IMapper mapper,
+                IHubContext<InventoryHub> hubContext)
             {
                 _inventoryRepository = inventoryRepository;
                 _transactionRepository = transactionRepository;
                 _unitOfWork = unitOfWork;
                 _messagePublisher = messagePublisher;
                 _mapper = mapper;
+                _hubContext = hubContext;
             }
 
             public async Task<InventoryDto> Handle(Command request, CancellationToken cancellationToken)
@@ -103,6 +108,9 @@ namespace InventoryService.Application.Features.Inventory.Commands
                     },
                     "inventory.transaction.created",
                     cancellationToken);
+
+                await _hubContext.Clients.All.SendAsync("InventoryUpdated", inventory.Id, inventory.ProductId, inventory.Quantity, cancellationToken);
+                await _hubContext.Clients.All.SendAsync("InventoryTransactionCreated", transaction.Id, inventory.Id, inventory.ProductId, transaction.Type.ToString(), transaction.Quantity,cancellationToken);
 
                 // Fetch updated inventory with location details
                 var updatedInventory = await _inventoryRepository.GetByIdAsync(inventory.Id, cancellationToken);

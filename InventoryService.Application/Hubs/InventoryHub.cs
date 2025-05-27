@@ -32,14 +32,6 @@ namespace InventoryService.Application.Hubs
                 inventoryId, productId, quantity);
         }
 
-        // Method to send low stock alert
-        public async Task NotifyLowStockAlert(int inventoryId, int productId, int locationId, int quantity, int threshold)
-        {
-            await Clients.All.SendAsync("LowStockAlert", inventoryId, productId, locationId, quantity, threshold);
-            _logger.LogWarning("LowStockAlert event sent: Product {ProductId} at Location {LocationId} - {Quantity}/{Threshold}",
-                productId, locationId, quantity, threshold);
-        }
-
         // Method to send inventory transaction created event
         public async Task NotifyInventoryTransactionCreated(int transactionId, int inventoryId, int productId, string type, int quantity)
         {

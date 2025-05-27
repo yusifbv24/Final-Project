@@ -38,14 +38,6 @@ namespace InventoryManagement.Web.Services.SignalR
                     InventoryTransactionCreated?.Invoke(transactionId, inventoryId, productId, type, quantity);
                 });
 
-            _hubConnection.On<int, int, int, int, int>("LowStockAlert",
-                (inventoryId, productId, locationId, quantity, threshold) =>
-                {
-                    _logger.LogWarning("Low stock alert: Product {ProductId} - Location {LocationId} - Quantity {Quantity}/{Threshold}",
-                        productId, locationId, quantity, threshold);
-                    LowStockAlert?.Invoke(inventoryId, productId, locationId, quantity, threshold);
-                });
-
             _hubConnection.Closed += async (error) => {
                 _isConnected = false;
                 _logger.LogWarning("Connection to Inventory hub closed. Error: {Error}", error?.Message);

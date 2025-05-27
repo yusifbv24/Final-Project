@@ -17,13 +17,12 @@ namespace OrderService.API.Controllers.v1
     public class OrderController : ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly IHubContext<OrderHub> _orderHubContext;
 
-        public OrderController(IMediator mediator, IHubContext<OrderHub> orderHubContext)
+        public OrderController(IMediator mediator)
         {
             _mediator = mediator;
-            _orderHubContext = orderHubContext;
         }
+
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -57,6 +56,7 @@ namespace OrderService.API.Controllers.v1
             return Ok(orders);
         }
 
+
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -65,10 +65,6 @@ namespace OrderService.API.Controllers.v1
             try
             {
                 var order = await _mediator.Send(new CreateOrder.Command(orderDto));
-
-                // Notify clients via SignalR
-                await _orderHubContext.Clients.All.SendAsync("OrderCreated", order.Id, order.CustomerName);
-
                 return CreatedAtAction(nameof(GetById), new { id = order.Id, version = "1.0" }, order);
             }
             catch (Exception ex)
@@ -76,6 +72,7 @@ namespace OrderService.API.Controllers.v1
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpPut("{id}/status")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -86,10 +83,6 @@ namespace OrderService.API.Controllers.v1
             try
             {
                 var order = await _mediator.Send(new UpdateOrderStatus.Command(id, statusDto));
-
-                // Notify clients via SignalR
-                await _orderHubContext.Clients.All.SendAsync("OrderStatusChanged", order.Id, order.Status.ToString());
-
                 return Ok(order);
             }
             catch (NotFoundException ex)

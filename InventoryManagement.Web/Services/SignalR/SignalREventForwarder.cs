@@ -91,19 +91,6 @@ namespace InventoryManagement.Web.Services.SignalR
                 }
             };
 
-            _inventoryHubClient.LowStockAlert += async (inventoryId, productId, locationId, quantity, threshold) =>
-            {
-                try
-                {
-                    await _inventoryHubContext.Clients.All.SendAsync("LowStockAlert", inventoryId, productId, locationId, quantity, threshold, stoppingToken);
-                    _logger.LogInformation("Forwarded LowStockAlert");
-                }
-                catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
-                {
-                    _logger.LogError(ex, "Error forwarding LowStockAlert");
-                }
-            };
-
             _inventoryHubClient.InventoryTransactionCreated += async (transactionId, inventoryId, productId, type, quantity) =>
             {
                 try

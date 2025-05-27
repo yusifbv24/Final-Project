@@ -34,7 +34,7 @@ namespace InventoryManagement.Web.Services.SignalR
                 OrderStatusChanged?.Invoke(orderId, status);
             });
 
-            // Add connection state handlers
+            // Add connection state handlers 
             _hubConnection.Closed += async (error) =>
             {
                 _isConnected = false;
