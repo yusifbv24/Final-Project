@@ -108,6 +108,7 @@ namespace InventoryService.Application.Features.Inventory.Commands
                     cancellationToken);
 
                 await _hubContext.Clients.All.SendAsync("InventoryUpdated", inventory.Id, inventory.ProductId, inventory.Quantity, cancellationToken);
+                await _hubContext.Clients.All.SendAsync("InventoryTransactionCreated", transaction.Id, inventory.Id, inventory.ProductId, transaction.Type.ToString(), transaction.Quantity, cancellationToken);
 
                 // Fetch updated inventory with location details
                 var updatedInventory = await _inventoryRepository.GetByIdAsync(inventory.Id, cancellationToken);

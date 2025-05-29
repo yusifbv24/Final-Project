@@ -48,17 +48,72 @@ namespace InventoryManagement.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(OrderViewModel order)
         {
-            if (ModelState.IsValid)
+            try
             {
-                var createdOrder = await _orderApiClient.CreateOrderAsync(order);
-                if (createdOrder != null)
+                // Remove items with zero quantity or invalid data
+                order.Items = order.Items?.Where(item =>
+                    item.Quantity > 0 &&
+                    item.ProductId > 0 &&
+                    !string.IsNullOrEmpty(item.ProductName)).ToList() ?? new List<OrderItemViewModel>();
+
+                // Validate that we have at least one item
+                if (!order.Items.Any())
                 {
-                    return RedirectToAction(nameof(Details), new { id = createdOrder.Id });
+                    ModelState.AddModelError("Items", "Order must contain at least one item.");
+                }
+
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(order.CustomerName))
+                {
+                    ModelState.AddModelError("CustomerName", "Customer name is required.");
+                }
+
+                if (string.IsNullOrWhiteSpace(order.CustomerEmail))
+                {
+                    ModelState.AddModelError("CustomerEmail", "Customer email is required.");
+                }
+
+                if (string.IsNullOrWhiteSpace(order.ShippingAddress))
+                {
+                    ModelState.AddModelError("ShippingAddress", "Shipping address is required.");
+                }
+
+                if (ModelState.IsValid)
+                {
+                    _logger.LogInformation("Creating order for customer: {CustomerName}", order.CustomerName);
+
+                    var createdOrder = await _orderApiClient.CreateOrderAsync(order);
+                    if (createdOrder != null)
+                    {
+                        _logger.LogInformation("Order created successfully with ID: {OrderId}", createdOrder.Id);
+                        TempData["Success"] = "Order created successfully!";
+                        return RedirectToAction(nameof(Details), new { id = createdOrder.Id });
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to create order - API returned null");
+                        ModelState.AddModelError("", "Failed to create order. Please try again.");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Model validation failed for order creation");
+                    foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        _logger.LogWarning("Validation error: {Error}", error.ErrorMessage);
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while creating order");
+                ModelState.AddModelError("", "An error occurred while creating the order. Please try again.");
+            }
 
+            // If we got here, something failed, reload the form
             var products = await _productApiClient.GetAllProductsAsync();
             ViewBag.Products = products;
             return View(order);

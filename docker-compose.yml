@@ -91,6 +91,29 @@ services:
     networks:
       - microservices-network
 
+  webapp:
+    build:
+      context: .
+      dockerfile: InventoryManagement.Web/Dockerfile
+    depends_on:
+      - product-service
+      - inventory-service
+      - order-service
+    ports:
+      - "5147:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Services__ProductService=http://product-service:8080
+      - Services__InventoryService=http://inventory-service:8080
+      - Services__OrderService=http://order-service:8080
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__VirtualHost=/
+    networks:
+      - microservices-network
+
 networks:
   microservices-network:
     driver: bridge
