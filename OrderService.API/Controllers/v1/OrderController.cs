@@ -1,11 +1,9 @@
 ﻿using Asp.Versioning;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using OrderService.Application.DTOs;
 using OrderService.Application.Features.Orders.Commands;
 using OrderService.Application.Features.Orders.Queries;
-using OrderService.Application.Hubs;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Exceptions;
 
