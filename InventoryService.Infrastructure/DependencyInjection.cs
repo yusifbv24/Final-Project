@@ -37,7 +37,7 @@ namespace InventoryService.Infrastructure
 
                 return new ConnectionFactory
                 {
-                    HostName = rabbitMQConfig["Host"] ?? "localhost",
+                    HostName = rabbitMQConfig["Host"] ?? "rabbitmq",
                     Port = int.Parse(rabbitMQConfig["Port"] ?? "5672"),
                     UserName = rabbitMQConfig["Username"] ?? "guest",
                     Password = rabbitMQConfig["Password"] ?? "guest",
