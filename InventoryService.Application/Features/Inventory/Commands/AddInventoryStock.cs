@@ -111,7 +111,7 @@ namespace InventoryService.Application.Features.Inventory.Commands
                 await _hubContext.Clients.All.SendAsync("InventoryTransactionCreated", transaction.Id, inventory.Id, inventory.ProductId, transaction.Type.ToString(), transaction.Quantity, cancellationToken);
 
                 // Fetch updated inventory with location details
-                var updatedInventory = await _inventoryRepository.GetByIdAsync(inventory.Id, cancellationToken);
+                var updatedInventory = await _inventoryRepository.GetByIdAsync(request.Id, cancellationToken);
                 return _mapper.Map<InventoryDto>(updatedInventory);
             }
         }
